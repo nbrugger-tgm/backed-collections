@@ -22,22 +22,22 @@ public class BackedListTest {
 			}
 		});
 		Arrays.stream(byteStore.getClass().getDeclaredFields()).forEach(e -> System.out.println(e.getName()));
-		System.out.println(byteStore);
-		test.add((byte) 1);
-		System.out.println(byteStore);
-		test.add((byte) 2);
-		System.out.println(byteStore);
-		test.add((byte) 3);
-		System.out.println(byteStore);
-		test.add((byte) 4);
-		System.out.println(byteStore);
-
-
-		ArrayStore store = new ArrayStore(1024*1024);
-		BackedList<String> list = new BackedList<>(store);
-		for (int i = 0; i < 1000; i++) {
-			list.add("Some string");
-		}
-		list.forEach(System.out::println);
+//		System.out.println(byteStore);
+//		test.add((byte) 1);
+//		System.out.println(byteStore);
+//		test.add((byte) 2);
+//		System.out.println(byteStore);
+//		test.add((byte) 3);
+//		System.out.println(byteStore);
+//		test.add((byte) 4);
+//		System.out.println(byteStore);
+//
+//
+//		ArrayStore store = new ArrayStore(1024*1024);
+//		BackedList<String> list = new BackedList<>(store);
+//		for (int i = 0; i < 1000; i++) {
+//			list.add("Some string");
+//		}
+//		list.forEach(System.out::println);
 	}
 }
