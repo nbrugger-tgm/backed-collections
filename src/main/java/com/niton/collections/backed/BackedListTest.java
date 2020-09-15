@@ -21,9 +21,9 @@ public class BackedListTest {
 				return (byte)(store.read()+ Byte.MIN_VALUE);
 			}
 		});
-		Arrays.stream(byteStore.getClass().getDeclaredFields()).forEach(e -> System.out.println(e.getName()));
-//		System.out.println(byteStore);
-//		test.add((byte) 1);
+
+		System.out.println(byteStore);
+		test.add((byte) 1);
 //		System.out.println(byteStore);
 //		test.add((byte) 2);
 //		System.out.println(byteStore);

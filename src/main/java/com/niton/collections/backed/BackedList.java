@@ -124,7 +124,8 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 		try {
 			shiftStream.resetCounter();
 			serializer.write(element, shiftStream);
-			int bytes = shiftStream.getCounter();
+			store.jump(5);
+			int bytes = shiftStream.getCounter(); // only executed line in between
 			addIndex(index,4+(4*(size()+1))+bytes);
 			for(int i = index+1;i<size();i++)
 				writeAddress(i,readAddress(i)+bytes);
