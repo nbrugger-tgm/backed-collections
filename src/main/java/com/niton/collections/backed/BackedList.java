@@ -10,25 +10,31 @@ import java.util.AbstractList;
 import java.util.RandomAccess;
 
 public class BackedList<T> extends AbstractList<T> implements RandomAccess{
-	private transient DataOutputStream dos;
-	private transient DataInputStream dis;
-	private transient CounterOutputStream shiftStream;
-	private transient DataOutputStream shiftDos;
+	private final transient DataStore.DataStoreOutputStream plainOutStream;
+	private final transient DataStore.DataStoreInputStream plainInStream;
+	private final transient DataOutputStream dos;
+	private final transient DataInputStream dis;
+	private final transient CounterOutputStream shiftStream;
+	private final transient DataOutputStream shiftDos;
 
 	public BackedList(DataStore store) {
 		this(store,new OOSSerializer<>());
 	}
 
-	private final DataStore store;
+	private DataStore store;
 	private final Serializer<T> serializer;
 
 	public BackedList(DataStore store, Serializer<T> serializer) {
 		this.store = store;
 		this.serializer = serializer;
+		plainOutStream = store.new DataStoreOutputStream();
+		plainInStream = store.new DataStoreInputStream();
 		dos = new DataOutputStream(store.new DataStoreOutputStream());
 		dis = new DataInputStream(store.new DataStoreInputStream());
 		shiftStream = new CounterOutputStream(store.new ShiftingOutputStream());
-		shiftDos = new DataOutputStream(shiftStream);
+		shiftDos = new DataOutputStream(store.new ShiftingOutputStream());
+		store.jump(0);
+		store.cut();
 		writeSize(0);
 	}
 
@@ -37,7 +43,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 		int address = readAddress(index);
 		store.jump(address);
 		try {
-			return serializer.read(dis);
+			return serializer.read(plainInStream);
 		} catch (Exception e) {
 			throw new RuntimeException("Backing Exception",e);
 		}
@@ -149,7 +155,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 		if(index+1 == size()){
 			store.jump(readAddress(index));
 			try {
-				serializer.write(element,dos);
+				serializer.write(element,plainOutStream);
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
