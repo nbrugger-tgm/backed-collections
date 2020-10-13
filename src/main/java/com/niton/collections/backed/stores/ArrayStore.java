@@ -1,47 +1,38 @@
 package com.niton.collections.backed.stores;
 
-import com.niton.collections.backed.DataStore;
-
 import java.util.Arrays;
 
-public class ArrayStore extends DataStore {
-	private int end = 0;
+public class ArrayStore extends FixedDataStore {
 	public ArrayStore(int size) {
 		this.data = new byte[size];
 	}
 
 	private byte[] data;
+
 	@Override
-	public int size() {
-		return Math.min(end,data.length);
+	protected int maxLength() {
+		return data.length;
 	}
 
 	@Override
-	protected byte[] innerRead(int from, int to) {
+	protected byte[] fixedInnerRead(long from, long to) {
+		if(from > Integer.MAX_VALUE || to > Integer.MAX_VALUE)
+			throw new IndexOutOfBoundsException("ArrayStores do not support values bigger than Integer.MAX_VALUE");
 		jump(to);
-		return Arrays.copyOfRange(data,from,to);
+		return Arrays.copyOfRange(data,(int)from,(int)to);
 	}
 
+
 	@Override
-	protected void innerWrite(byte[] data, int from, int to) {
-		for (int i = from; i < to; i++) {
-			this.data[i] = data[i-from];
+	protected void fixedInnerWrite(byte[] data, long from, long to) {
+		if(from > Integer.MAX_VALUE || to > Integer.MAX_VALUE)
+			throw new IndexOutOfBoundsException("ArrayStores do not support values bigger than Integer.MAX_VALUE");
+		for (int i = (int) from; i < to; i++) {
+			this.data[i] = data[(int) (i-from)];
 		}
 		jump(to);
-		end = Math.max(to,end);
 	}
 
-	@Override
-	public int cut(int from) {
-		jump(from);
-		int counter = 0;
-		while (getMarker() < size()) {
-			counter++;
-			write(0);
-		}
-		end = from;
-		return counter;
-	}
 
 	public byte[] getData() {
 		return data;
@@ -51,20 +42,8 @@ public class ArrayStore extends DataStore {
 		this.data = data;
 	}
 
-	public void shiftAll(int offset) {
-		shift(offset, (size()- getMarker())-offset);
+	public void shiftAll(long offset) {
+		shift(offset, (size()- getMarker()));
 	}
 
-	@Override
-	public String toString() {
-		final StringBuffer sb = new StringBuffer("ArrayStore->");
-		if (data == null) sb.append("null");
-		else {
-			sb.append('[');
-			for (int i = 0; i < data.length; ++i)
-				sb.append(i == 0 ? "" : ", ").append(i == getMarker()?"> ":"").append(data[i]);
-			sb.append(']');
-		}
-		return sb.toString();
-	}
 }

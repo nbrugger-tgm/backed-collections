@@ -1,39 +1,51 @@
-package com.niton.collections.backed;
+package com.niton.collections.backed.stores;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.*;
+import java.util.stream.*;
 
 public abstract class DataStore {
 	public int bufferSize = 1024*8;
-	private int marker = 0;
-	public abstract int size();
+	private long marker = 0;
+
+	/**
+	 * @return the number of actual used bytes. NOT THE MAXIMUM SIZE
+	 */
+	public abstract long size();
 	public static final int byteShift = Byte.MIN_VALUE;
 	public int read() {
 		return unsignedByte(innerRead(marker, marker +1))[0];
 	}
 
-	private int[] unsignedByte(byte[] innerRead) {
+	public static int[] unsignedByte(byte[] innerRead) {
 		int[] unsigned = new int[innerRead.length];
 		for (int i = 0; i < innerRead.length; i++) {
-			unsigned[i] = innerRead[i]-byteShift;
+			unsigned[i] = innerRead[i]& 0xFF;
 		}
 		return unsigned;
 	}
 
-	private byte[] signedByte(int[] innerRead) {
+	public static byte[] signedByte(int[] innerRead) {
 		byte[] unsigned = new byte[innerRead.length];
 		for (int i = 0; i < innerRead.length; i++) {
-			unsigned[i] = (byte) (innerRead[i]+byteShift);
+			unsigned[i] = (byte) innerRead[i];
 		}
 		return unsigned;
 	}
 
-	public byte[] readNext(int len) {
+	public byte[] readNext(long len) {
 		return innerRead(marker, marker +len);
 	}
 
-	public byte[] read(int from, int to) {
+	/**
+	 *
+	 * @param from inlclusive
+	 * @param to exclusive
+	 * @return the array of data
+	 */
+	public byte[] read(long from, long to) {
 		return innerRead(from,to);
 	}
 
@@ -43,10 +55,10 @@ public abstract class DataStore {
 	 * @param to the index (exclusive) in the datastore to start in the datastore to end the read at
 	 * @return the data
 	 */
-	protected abstract byte[] innerRead(int from,int to);
+	protected abstract byte[] innerRead(long from,long to);
 
-	public int read(int index) {
-		return unsignedByte(innerRead(index,index++))[0];
+	public int read(long index) {
+		return unsignedByte(innerRead(index,++index))[0];
 	}
 
 	public void write(int data) {
@@ -59,7 +71,7 @@ public abstract class DataStore {
 	public void write(byte[] data){
 		innerWrite(data, marker, marker + data.length);
 	}
-	public void write(byte[] data, int from, int to) {
+	public void write(byte[] data, long from, long to) {
 		innerWrite(data,from,to);
 	}
 
@@ -70,22 +82,22 @@ public abstract class DataStore {
 	 * @param to the last index to write to
 	 * @return
 	 */
-	protected abstract void innerWrite(byte[] data,int from,int to);
+	protected abstract void innerWrite(byte[] data,long from,long to);
 
-	public int skip(int size){
+	public long skip(long size){
 		marker += size;
 		return marker;
 	}
-	public int rewind(int size){
+	public long rewind(long size){
 		marker -= size;
 		return marker;
 	}
-	public int jumpToEnd(){
+	public long jumpToEnd(){
 		marker = size();
 		return marker;
 	}
 
-	public int getMarker() {
+	public long getMarker() {
 		return marker;
 	}
 
@@ -93,29 +105,43 @@ public abstract class DataStore {
 	 * alias for set pointer
 	 * @param index
 	 */
-	public void jump(int index){
+	public void jump(long index){
 		marker = index;
 	}
 
-	public void setMarker(int marker) {
+	public void setMarker(long marker) {
 		this.marker = marker;
 	}
 
-	public void shiftAll(int offset) {
+	public void shiftAll(long offset) {
 		shift(offset, size()- marker);
 	}
+
+
 
 	public class DataStoreOutputStream extends OutputStream {
 		@Override
 		public void write(int b) throws IOException {
 			DataStore.this.write(b);
 		}
+
+		@Override
+		public void write(byte[] b, int off, int len) throws IOException {
+			innerWrite(Arrays.copyOfRange(b,off,off+len),marker,marker+len);
+		}
 	}
 
 	public class DataStoreInputStream extends InputStream {
 		@Override
 		public int read() throws IOException {
-			return DataStore.this.read();
+			int r =  DataStore.this.read();
+			return r;
+		}
+
+		@Override
+		public int read(byte[] b, int off, int len) throws IOException {
+			System.arraycopy(DataStore.this.innerRead(marker,marker+len),0,b,off,len);
+			return len;
 		}
 	}
 	public class ShiftingOutputStream extends OutputStream {
@@ -124,6 +150,11 @@ public abstract class DataStore {
 		public void write(int b) throws IOException {
 			shiftWrite(b);
 		}
+
+		@Override
+		public void write(byte[] b, int off, int len) throws IOException {
+			shiftWrite(Arrays.copyOfRange(b, off, off+len));
+		}
 	}
 
 	/**
@@ -131,7 +162,7 @@ public abstract class DataStore {
 	 * @param b
 	 */
 	public void shiftWrite(int b){
-		int origin = marker;
+		long origin = marker;
 		if(origin<size()) {
 			shiftAll(1);
 			jump(origin);
@@ -139,7 +170,7 @@ public abstract class DataStore {
 		write(b);
 	}
 	public void shiftWrite(byte[] data){
-		int origin = getMarker();
+		long origin = getMarker();
 		shiftAll(data.length);
 		jump(origin);
 		write(data);
@@ -151,8 +182,8 @@ public abstract class DataStore {
 	 * @param from the index to remove bytes (exclusive)
 	 * @return the number of bytes removed
 	 */
-	public abstract int cut(int from);
-	public int cut(){
+	public abstract long cut(long from);
+	public long cut(){
 		return cut(marker);
 	}
 
@@ -161,7 +192,7 @@ public abstract class DataStore {
 	 * The original position of the byte stays unchanged
 	 * @param offset the numbers of bytes to shift the byte (negative value shifts it backwards/towards file start)
 	 */
-	public void shift(int offset){
+	public void shift(long offset){
 		int val = read();
 		skip(offset-1);
 		write(val);
@@ -171,13 +202,13 @@ public abstract class DataStore {
 	 * Shifts a portion of the array around
 	 * @param offset the ammount to shift the array
 	 * @param lenght the ammount of bytes to shift
-	 * @see #shift(int)
+	 * @see #shift(long)
 	 */
-	public void shift(int offset,int lenght){
+	public void shift(long offset,long lenght){
 		if(getMarker()>size())
 			return;
 		boolean startAtEnd = offset>0;
-		int origin = getMarker();
+		long origin = getMarker();
 		if(startAtEnd) {
 			while (lenght > bufferSize) {
 				jump(origin+(lenght -= bufferSize));
@@ -194,5 +225,40 @@ public abstract class DataStore {
 		byte[] dataToShift = readNext(lenght);
 		jump(origin+offset);
 		write(dataToShift);
+		jump(origin+offset);
+	}
+
+	@Override
+	public String toString() {
+		long originMarker = getMarker();
+		jump(0);
+		final StringBuffer sb = new StringBuffer(getClass().getSimpleName()+"->");
+		sb.append('[');
+		for (int i = 0; i < size(); ++i)
+			sb.append(i == 0 ? "" : ", ").append(i == originMarker?"> ":"").append(read(i));
+		sb.append(']');
+		jump(originMarker);
+		return sb.toString();
+	}
+
+	public InputStream openReadStream(){
+		return new DataStoreInputStream();
+	}
+	public OutputStream openWritingStream(){
+		return new DataStoreOutputStream();
+	}
+	public OutputStream openShiftWritingStream(){
+		return new ShiftingOutputStream();
+	}
+
+	public Stream<Byte> stream(){
+		long start;
+		byte[] data = read(start = getMarker(),	size());
+		jump(start);
+		Byte[] wrapped = new Byte[data.length];
+		for (int i = 0; i < data.length; i++) {
+			wrapped[i] = data[i];
+		}
+		return Arrays.stream(wrapped);
 	}
 }

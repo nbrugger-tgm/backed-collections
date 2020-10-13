@@ -1,150 +1,129 @@
 package com.niton.collections.backed;
 
+import com.niton.collections.backed.managed.Section;
+import com.niton.collections.backed.managed.VirtualMemory;
+import com.niton.collections.backed.stores.DataStore;
 import com.niton.collections.backed.streams.CounterOutputStream;
 
-import java.io.DataInputStream;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.AbstractList;
 import java.util.RandomAccess;
 
 public class BackedList<T> extends AbstractList<T> implements RandomAccess{
-	private final transient DataStore.DataStoreOutputStream plainOutStream;
-	private final transient DataStore.DataStoreInputStream plainInStream;
-	private final transient DataOutputStream dos;
-	private final transient DataInputStream dis;
-	private final transient CounterOutputStream shiftStream;
-	private final transient DataOutputStream shiftDos;
 
-	public BackedList(DataStore store) {
-		this(store,new OOSSerializer<>());
+	/**
+	 * This size is used as a default size for an object page.
+	 * Increasing the value means more memory consumption but lowers the numbers of neccessarry operations like shifting.
+	 * In the best case each object has a defined size in bytes, like int=4.
+	 */
+	public long reservedObjectSpace = 100;
+	private final VirtualMemory memory;
+	private final Section metaSection;
+	private final DataOutputStream metaWriter;
+	private final DataInputStream metaReader;
+	private static final int SIZE_POINTER = 0;
+	public BackedList(DataStore store,boolean read) {
+		this(store,new OOSSerializer<>(),read);
 	}
 
-	private DataStore store;
 	private final Serializer<T> serializer;
 
-	public BackedList(DataStore store, Serializer<T> serializer) {
-		this.store = store;
+	public BackedList(DataStore store, Serializer<T> serializer,boolean read) {
 		this.serializer = serializer;
-		plainOutStream = store.new DataStoreOutputStream();
-		plainInStream = store.new DataStoreInputStream();
-		dos = new DataOutputStream(store.new DataStoreOutputStream());
-		dis = new DataInputStream(store.new DataStoreInputStream());
-		shiftStream = new CounterOutputStream(store.new ShiftingOutputStream());
-		shiftDos = new DataOutputStream(store.new ShiftingOutputStream());
-		store.jump(0);
-		store.cut();
-		writeSize(0);
+		this.memory = new VirtualMemory(store);
+		if(read){
+			memory.readIndex();
+			metaSection = memory.get(0);
+		}else{
+			memory.initIndex(10);
+			metaSection = memory.createSection(256,1);
+		}
+		metaReader = new DataInputStream(metaSection.openReadStream());
+		metaWriter = new DataOutputStream(metaSection.openWritingStream());
+		if (!read){
+			writeSize(0);
+		}
 	}
 
 	@Override
 	public T get(int index) {
-		int address = readAddress(index);
-		store.jump(address);
+		if(index>size())
+			return  null;
+		Section s = memory.get(index+1);
+		s.jump(0);
 		try {
-			return serializer.read(plainInStream);
+			return serializer.read(s.openReadStream());
 		} catch (Exception e) {
 			throw new RuntimeException("Backing Exception",e);
 		}
 	}
 
-	private int readAddress(int index) {
-		int size = size();
-		if(index>=size)
-			throw new IndexOutOfBoundsException(index);
-		try {
-			//int is 4 bytes
-			store.skip(4*index);
-			return dis.readInt();
-		} catch (IOException e) {
-			throw new RuntimeException("Backing error",e);
-		}
-	}
-
 	@Override
 	public int size() {
-		store.jump(0);
+		metaSection.jump(SIZE_POINTER);
 		try {
-			return dis.readInt();
+			return metaReader.readInt();
 		} catch (IOException e) {
-			throw new RuntimeException("Backing error",e);
+			throw new RuntimeException(e);
+		}
+	}
+	private void writeSize(int sz){
+		metaSection.jump(SIZE_POINTER);
+		try {
+			metaWriter.writeInt(sz);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
 		}
 	}
 
 	@Override
 	public T remove(int index) {
-		T toRemove = get(index);
-		int address = readAddress(index);
-		int sizeToRemove = 0;
-		if(size()==index+1){
-			store.jump(address);
+		T e = get(index);
+		int sz = size();
+		if(index+1<sz)
+			shiftElements(index+1,-1);
+		writeSize(sz-1);
+		return e;
+	}
+
+	private void shiftElements(int i, int shift) {
+		if(shift == 0)
+			return;
+		if(shift<0){
+			int sz = size();
+			for (int j = i; j < sz; j++) {
+				T e = get(j);
+				set(j+shift,e);
+			}
 		}else{
-			int followUpAddress = readAddress(index+1);
-			sizeToRemove = followUpAddress-address;
-			store.jump(followUpAddress);
-			store.shiftAll(-sizeToRemove);
-		}
-		store.cut();
-		removeFromIndex(index);
-		for (int i = index+1; i < size(); i++) {
-			writeAddress(i, readAddress(i)-sizeToRemove);
-		}
-		return toRemove;
-	}
-
-	private void writeAddress(int index, int address) {
-		store.jump(4+index*4);
-		try {
-			dos.writeInt(address);
-		} catch (IOException e) {
-			throw new RuntimeException("",e);
-		}
-	}
-
-	private void removeFromIndex(int index) {
-		writeSize(size()-1);
-		store.jump((index+1)*4);
-		store.shiftAll(4);
-	}
-
-	private void writeSize(int i) {
-		store.jump(0);
-		try {
-			dos.writeInt(i);
-		} catch (IOException e) {
-			throw new RuntimeException("",e);
+			for (int j = i; j >= 0; j--) {
+				T e = get(j);
+				if(j+shift>size())
+					add(j+shift, e);
+				else
+					set(j+shift,e);
+			}
 		}
 	}
 
 	@Override
 	public void add(int index, T element) {
-		if(size() > 0) {
-			if(index == size())
-				store.jump(store.size());
+		Section sec;
+		if(index == size())
+			if(memory.readSize()-1 <= index)
+				sec = memory.createSection(reservedObjectSpace,1);
 			else
-				store.jump(readAddress(index));
-		}else{
-			store.jump(4);
+				sec = memory.get(index+1);
+		else {
+			shiftElements(index, 1);
+			sec = memory.get(index+1);
 		}
 		try {
-			shiftStream.resetCounter();
-			serializer.write(element, shiftStream);
-			store.jump(5);
-			int bytes = shiftStream.getCounter(); // only executed line in between
-			addIndex(index,4+(4*(size()+1))+bytes);
-			for(int i = index+1;i<size();i++)
-				writeAddress(i,readAddress(i)+bytes);
-		} catch (IOException e) {
-			throw new RuntimeException("Store exception",e);
-		}
-	}
-
-	private void addIndex(int index, int address) {
-		writeSize(size()+1);
-		store.skip((index)*4);
-		try {
-			shiftDos.writeInt(address);
+			OutputStream os = sec.openWritingStream();
+			sec.jump(0);
+			serializer.write(element, os);
+			int sz = size();
+			writeSize(sz+1);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
@@ -152,31 +131,13 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 
 	@Override
 	public T set(int index, T element) {
-		if(index+1 == size()){
-			store.jump(readAddress(index));
-			try {
-				serializer.write(element,plainOutStream);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
-			return element;
-		}
-		int nextAddress,address;
-		int oldSize = readAddress(nextAddress = index+1)-(address = readAddress(index));
-		store.jump(nextAddress);
-		store.shiftAll(-oldSize);
-		store.cut();
-		store.jump(address);
-		shiftStream.resetCounter();
+		Section sec = memory.get(index+1);
+		sec.jump(0);
+		OutputStream os = sec.openWritingStream();
 		try {
-			serializer.write(element,shiftStream);
+			serializer.write(element, os);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
-		}
-		int written = shiftStream.getCounter();
-		int diff = written-oldSize;
-		for (int i = index+1; i < size(); i++) {
-			writeAddress(i,readAddress(i)+diff);
 		}
 		return element;
 	}

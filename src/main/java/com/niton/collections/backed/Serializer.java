@@ -1,5 +1,7 @@
 package com.niton.collections.backed;
 
+import com.niton.collections.backed.stores.DataStore;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
