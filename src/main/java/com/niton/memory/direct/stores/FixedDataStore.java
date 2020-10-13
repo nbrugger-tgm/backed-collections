@@ -1,6 +1,4 @@
-package com.niton.collections.backed.stores;
-
-import java.util.IllegalFormatException;
+package com.niton.memory.direct.stores;
 
 /**
  * A Datastore with NON variable size

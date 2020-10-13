@@ -1,4 +1,4 @@
-package com.niton.collections.backed.stores;
+package com.niton.memory.direct.stores;
 
 import java.io.File;
 import java.io.FileNotFoundException;

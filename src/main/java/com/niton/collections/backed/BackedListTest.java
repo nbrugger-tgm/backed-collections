@@ -1,13 +1,12 @@
 package com.niton.collections.backed;
 
-import com.niton.collections.backed.managed.Section;
-import com.niton.collections.backed.managed.VirtualMemory;
-import com.niton.collections.backed.stores.ArrayStore;
-import com.niton.collections.backed.stores.DataStore;
-import com.niton.collections.backed.stores.FileStore;
+import com.niton.memory.direct.managed.Section;
+import com.niton.memory.direct.managed.VirtualMemory;
+import com.niton.memory.direct.stores.ArrayStore;
+import com.niton.memory.direct.stores.DataStore;
+import com.niton.memory.direct.stores.FileStore;
 
 import java.io.*;
-import java.util.Arrays;
 
 public class BackedListTest {
 	private static DataStore byteStore;

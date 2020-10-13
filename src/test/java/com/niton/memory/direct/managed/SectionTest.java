@@ -1,8 +1,8 @@
-package com.niton.collections.backed.managed;
+package com.niton.memory.direct.managed;
 
-import com.niton.collections.backed.stores.ArrayStore;
-import com.niton.collections.backed.stores.DataStore;
-import com.niton.collections.backed.stores.DataStoreTest;
+import com.niton.memory.direct.stores.ArrayStore;
+import com.niton.memory.direct.stores.DataStore;
+import com.niton.memory.direct.stores.DataStoreTest;
 import org.junit.jupiter.api.*;
 
 import static org.junit.jupiter.api.Assertions.*;

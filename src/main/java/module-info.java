@@ -1,6 +1,6 @@
 open module niton.collections.backed {
 	requires java.base;
 	exports com.niton.collections.backed;
-	exports com.niton.collections.backed.stores;
-	exports com.niton.collections.backed.streams;
+	exports com.niton.memory.direct.stores;
+	exports com.niton.memory.direct.managed;
 }

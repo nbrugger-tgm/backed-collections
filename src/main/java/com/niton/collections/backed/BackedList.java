@@ -1,9 +1,8 @@
 package com.niton.collections.backed;
 
-import com.niton.collections.backed.managed.Section;
-import com.niton.collections.backed.managed.VirtualMemory;
-import com.niton.collections.backed.stores.DataStore;
-import com.niton.collections.backed.streams.CounterOutputStream;
+import com.niton.memory.direct.managed.Section;
+import com.niton.memory.direct.managed.VirtualMemory;
+import com.niton.memory.direct.stores.DataStore;
 
 import java.io.*;
 import java.util.AbstractList;

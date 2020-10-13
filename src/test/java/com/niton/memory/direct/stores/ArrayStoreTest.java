@@ -1,6 +1,4 @@
-package com.niton.collections.backed.stores;
-
-import static org.junit.jupiter.api.Assertions.*;
+package com.niton.memory.direct.stores;
 
 class ArrayStoreTest extends DataStoreTest{
 
