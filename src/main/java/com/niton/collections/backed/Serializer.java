@@ -1,6 +1,6 @@
 package com.niton.collections.backed;
 
-import com.niton.memory.direct.stores.DataStore;
+import com.niton.memory.direct.DataStore;
 
 import java.io.IOException;
 import java.io.InputStream;

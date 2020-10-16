@@ -2,7 +2,7 @@ package com.niton.collections.backed;
 
 import com.niton.memory.direct.managed.Section;
 import com.niton.memory.direct.managed.VirtualMemory;
-import com.niton.memory.direct.stores.DataStore;
+import com.niton.memory.direct.DataStore;
 
 import java.io.*;
 import java.util.AbstractList;
@@ -46,6 +46,8 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 
 	@Override
 	public T get(int index) {
+		if(index< 0)
+			throw new IndexOutOfBoundsException("Negative indexes are not allowed");
 		if(index>size())
 			return  null;
 		Section s = memory.get(index+1);
@@ -58,13 +60,37 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 	}
 
 	@Override
-	public int size() {
-		metaSection.jump(SIZE_POINTER);
-		try {
-			return metaReader.readInt();
-		} catch (IOException e) {
-			throw new RuntimeException(e);
+	public boolean contains(Object o) {
+		if(size() == 0)
+			return false;
+		for(T e : this)
+			if((e==null &&o==null) || (e != null && e.equals(o)))
+			return true;
+		return false;
+	}
+
+	@Override
+	public int indexOf(Object o) {
+		if(size() == 0)
+			return -1;
+		//TODO performance upgrade, serializing o and matchig the bytes agains the storage. Should yeeld good results in speed
+		for (int i = 0; i < size(); i++) {
+			T e = get(i);
+			if((e==null && o ==null) || (e!=null&&o!=null&&e.equals(o)))
+				return i;
 		}
+		return -1;
+	}
+
+	@Override
+	public int size() {
+		return (int) (memory.sectionCount()-1);
+//		metaSection.jump(SIZE_POINTER);
+//		try {
+//			return metaReader.readInt();
+//		} catch (IOException e) {
+//			throw new RuntimeException(e);
+//		}
 	}
 	private void writeSize(int sz){
 		metaSection.jump(SIZE_POINTER);
@@ -78,44 +104,17 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 	@Override
 	public T remove(int index) {
 		T e = get(index);
-		int sz = size();
-		if(index+1<sz)
-			shiftElements(index+1,-1);
-		writeSize(sz-1);
+		memory.deleteSegment(index+1);
+		writeSize(size()-1);
 		return e;
 	}
-
-	private void shiftElements(int i, int shift) {
-		if(shift == 0)
-			return;
-		if(shift<0){
-			int sz = size();
-			for (int j = i; j < sz; j++) {
-				T e = get(j);
-				set(j+shift,e);
-			}
-		}else{
-			for (int j = i; j >= 0; j--) {
-				T e = get(j);
-				if(j+shift>size())
-					add(j+shift, e);
-				else
-					set(j+shift,e);
-			}
-		}
-	}
-
 	@Override
 	public void add(int index, T element) {
 		Section sec;
 		if(index == size())
-			if(memory.readSize()-1 <= index)
-				sec = memory.createSection(reservedObjectSpace,1);
-			else
-				sec = memory.get(index+1);
+			sec = memory.createOrGetSection(reservedObjectSpace,1,index+1);
 		else {
-			shiftElements(index, 1);
-			sec = memory.get(index+1);
+			sec = memory.insertSection(index+1,reservedObjectSpace,1);
 		}
 		try {
 			OutputStream os = sec.openWritingStream();

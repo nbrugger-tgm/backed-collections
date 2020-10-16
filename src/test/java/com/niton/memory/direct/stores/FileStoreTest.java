@@ -1,5 +1,7 @@
 package com.niton.memory.direct.stores;
 
+import com.niton.memory.direct.DataStore;
+
 import java.io.File;
 import java.io.IOException;
 

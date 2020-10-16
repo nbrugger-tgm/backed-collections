@@ -3,8 +3,7 @@ package com.niton.collections.backed;
 import com.niton.memory.direct.managed.Section;
 import com.niton.memory.direct.managed.VirtualMemory;
 import com.niton.memory.direct.stores.ArrayStore;
-import com.niton.memory.direct.stores.DataStore;
-import com.niton.memory.direct.stores.FileStore;
+import com.niton.memory.direct.DataStore;
 
 import java.io.*;
 
@@ -19,10 +18,25 @@ public class BackedListTest {
 
 		//testVirtualMemory();
 
-		BackedList<Byte> test = new BackedList<>(byteStore,false);
+		BackedList<Byte> test = new BackedList<>(byteStore, new Serializer<Byte>() {
+			@Override
+			public void write(Byte data, OutputStream store) throws IOException {
+				store.write(new byte[]{data});
+			}
+
+			@Override
+			public Byte read(InputStream store) throws IOException, ClassNotFoundException {
+				byte[] cont = new byte[1];
+				store.read(cont);
+				return cont[0];
+			}
+		},false);
+		test.reservedObjectSpace = 1;
 		System.out.println(test);
 		test.add((byte) 1);
+		test.add(0, (byte) 0);
 		test.get(0);
+
 		test.forEach(System.out::println);
 		System.out.println(test);
 

@@ -1,17 +1,16 @@
 package com.niton.memory.direct.stores;
 
+import com.niton.memory.direct.DataStore;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Arrays;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 public abstract class DataStoreTest {
 	protected DataStore store = createDataStoreImpl();
-
 	protected abstract DataStore createDataStoreImpl();
 
 	@Test
@@ -36,14 +35,16 @@ public abstract class DataStoreTest {
 	@Test
 	void shiftAll() {
 		store.jump(0);
-		Stream.of(1,2,3,4,5,6,7,8,9,10).map(i ->i-Byte.MIN_VALUE).forEach(store::write);
+		byte[] data = new byte[]{1,2,3,4,5,6,7,8,9,10};
+		store.write(data);
 		store.cut();
 		store.jump(0);
 		long oldSize = store.size();
 		store.shiftAll(3);
 		assertEquals(3, store.getMarker(),"Byte marker displaced");
 		assertEquals(oldSize+3, store.size());
-		assertTrue(Arrays.equals(new byte[]{1,2,3,4,5,6,7,8,9,10},store.readNext(10)));
+		store.jump(3);
+		assertArrayEquals(data,store.readNext(10));
 	}
 	@Test
 	void shiftWrite(){
@@ -59,9 +60,9 @@ public abstract class DataStoreTest {
 		store.jump(0);
 		assertArrayEquals(new byte[]{1,2,3,4,5,6,7,8,9,10},store.readNext(10),"Values incorrect written or read");
 		store.jump(0);
-		Stream.of(1,2,3,4,5).forEach(e->store.shiftWrite(e-Byte.MIN_VALUE));
+		Stream.of(1,2,3,4,5).forEach(e->store.shiftWrite(DataStore.unsignedByte(new byte[]{e.byteValue()})[0]));
 		store.jump(0);
-		assertTrue(Arrays.equals(new byte[]{1,2,3,4,5},store.readNext(5)));
+		assertArrayEquals(new byte[]{1,2,3,4,5},store.readNext(5));
 	}
 	@Test
 	void fullTest(){
@@ -84,6 +85,18 @@ public abstract class DataStoreTest {
 		assertEquals(presize+10, store.size(),"Store not properly enlarged after shift");
 		store.jump(10);
 		assertArrayEquals(new byte[]{1,2,3,4,5},store.readNext(5),"Wrong reads after shift");
+	}
+
+	@Test
+	void singleWrite(){
+		store.jump(0);
+		store.write(1);
+		store.write(2);
+		store.write(3);
+		store.jump(0);
+		assertEquals(1, store.read());
+		assertEquals(2, store.read());
+		assertEquals(3, store.read());
 	}
 
 	@Test

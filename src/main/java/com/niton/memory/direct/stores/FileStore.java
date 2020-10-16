@@ -5,7 +5,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-public class FileStore extends DataStore{
+import com.niton.memory.direct.DataStore;
+
+public class FileStore extends DataStore {
 	private final RandomAccessFile file;
 
 	public FileStore(RandomAccessFile file) {

@@ -1,5 +1,8 @@
 package com.niton.memory.direct.stores;
 
+import com.niton.memory.direct.DataStore;
+import com.niton.memory.direct.managed.*;
+
 /**
  * A Datastore with NON variable size
  */
@@ -10,12 +13,12 @@ public abstract class FixedDataStore extends DataStore {
 	public long size() {
 		return Math.min(end,maxLength());
 	}
-	protected abstract int maxLength();
+	public abstract int maxLength();
 
 	@Override
 	protected byte[] innerRead(long from, long to) {
 		if(from > maxLength() || to > maxLength())
-			throw new IllegalArgumentException(to+" Is out of bound");
+			throw new Section.SegmentationFault(to+" is outside the readable area (0-"+maxLength()+")");
 		return fixedInnerRead(from,to);
 	}
 
@@ -24,7 +27,7 @@ public abstract class FixedDataStore extends DataStore {
 	@Override
 	protected void innerWrite(byte[] data, long from, long to) {
 		if(to > maxLength())
-			throw new IllegalArgumentException(to+" is out of bound");
+			throw new MemoryOverflowException(maxLength(), to);
 		fixedInnerWrite(data,from,to);
 		end = Math.max(to,end);
 	}
@@ -49,5 +52,10 @@ public abstract class FixedDataStore extends DataStore {
 			sb.append(']');
 			jump(originMarker);
 		return sb.toString();
+	}
+	public static class MemoryOverflowException extends RuntimeException{
+		public MemoryOverflowException(long maxSize,long writePosition) {
+			super("You DataStore is out of Memory. DataStore:"+VirtualMemory.humanReadableByteCountSI(maxSize)+" Write address:"+VirtualMemory.humanReadableByteCountSI(writePosition));
+		}
 	}
 }

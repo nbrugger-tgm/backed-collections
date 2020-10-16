@@ -1,15 +1,15 @@
-package com.niton.memory.direct.stores;
+package com.niton.memory.direct;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.*;
-import java.util.stream.*;
+import java.util.Arrays;
+import java.util.stream.Stream;
 
-public abstract class DataStore {
+public abstract class TypedDataStore {
 	public int bufferSize = 1024*8;
+	private byte BASE_SYSTEM = 8;
 	private long marker = 0;
-
 	/**
 	 * @return the number of actual used bytes. NOT THE MAXIMUM SIZE
 	 */
@@ -119,10 +119,12 @@ public abstract class DataStore {
 
 
 
+
+
 	public class DataStoreOutputStream extends OutputStream {
 		@Override
 		public void write(int b) throws IOException {
-			DataStore.this.write(b);
+			TypedDataStore.this.write(b);
 		}
 
 		@Override
@@ -134,13 +136,13 @@ public abstract class DataStore {
 	public class DataStoreInputStream extends InputStream {
 		@Override
 		public int read() throws IOException {
-			int r =  DataStore.this.read();
+			int r =  TypedDataStore.this.read();
 			return r;
 		}
 
 		@Override
 		public int read(byte[] b, int off, int len) throws IOException {
-			System.arraycopy(DataStore.this.innerRead(marker,marker+len),0,b,off,len);
+			System.arraycopy(TypedDataStore.this.innerRead(marker,marker+len),0,b,off,len);
 			return len;
 		}
 	}
@@ -200,12 +202,16 @@ public abstract class DataStore {
 
 	/**
 	 * Shifts a portion of the array around
-	 * @param offset the ammount to shift the array
+	 * @param offset the ammount to shift the array (negative value shifts it backwards/towards index 0)
 	 * @param lenght the ammount of bytes to shift
 	 * @see #shift(long)
 	 */
 	public void shift(long offset,long lenght){
-		if(getMarker()>size())
+		if(getMarker()>=size())
+			return;
+		if(offset == 0)
+			return;
+		if(lenght == 0)
 			return;
 		boolean startAtEnd = offset>0;
 		long origin = getMarker();
@@ -234,7 +240,7 @@ public abstract class DataStore {
 		jump(0);
 		final StringBuffer sb = new StringBuffer(getClass().getSimpleName()+"->");
 		sb.append('[');
-		for (int i = 0; i < size(); ++i)
+		for (long i = 0; i < size(); ++i)
 			sb.append(i == 0 ? "" : ", ").append(i == originMarker?"> ":"").append(read(i));
 		sb.append(']');
 		jump(originMarker);

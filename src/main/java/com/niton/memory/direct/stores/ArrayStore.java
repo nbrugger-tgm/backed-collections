@@ -2,6 +2,8 @@ package com.niton.memory.direct.stores;
 
 import java.util.Arrays;
 
+import com.niton.memory.direct.stores.*;
+import com.niton.memory.direct.managed.*;
 public class ArrayStore extends FixedDataStore {
 	public ArrayStore(int size) {
 		this.data = new byte[size];
@@ -10,7 +12,7 @@ public class ArrayStore extends FixedDataStore {
 	private byte[] data;
 
 	@Override
-	protected int maxLength() {
+	public int maxLength() {
 		return data.length;
 	}
 
