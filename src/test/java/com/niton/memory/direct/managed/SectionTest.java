@@ -70,5 +70,8 @@ public class SectionTest extends DataStoreTest {
 		assertEquals(size,sect.size());
 		assertEquals(capa,sect.capacity());
 		assertArrayEquals(data,sect.read(0,data.length));
+		sect.shiftBack(20);assertEquals(size,sect.size());
+		assertEquals(capa,sect.capacity());
+		assertArrayEquals(data,sect.read(0,data.length));
 	}
 }

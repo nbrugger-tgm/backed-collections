@@ -8,6 +8,7 @@ import com.google.common.collect.testing.features.CollectionFeature;
 import com.google.common.collect.testing.features.CollectionSize;
 import com.google.common.collect.testing.features.ListFeature;
 import com.niton.collections.backed.BackedList;
+import com.niton.collections.backed.SimpleBackedList;
 import com.niton.memory.direct.stores.ArrayStore;
 import junit.framework.Test;
 import junit.framework.TestSuite;
@@ -31,33 +32,33 @@ public class CollectionTests {
 	}
 	public Test testBackedList() {
 		return ListTestSuiteBuilder
-				.using(new TestListGenerator<Rectangle>() {
+				.using(new TestListGenerator<String>() {
 					@Override
-					public SampleElements<Rectangle> samples() {
+					public SampleElements<String> samples() {
 						return new SampleElements<>(
-								new Rectangle(1,2,3,4),
-								new Rectangle(3,4,5,6),
-								new Rectangle(6,3,2,1),
-								new Rectangle(2000,3000,4000,5000),
-								new Rectangle()
-								);
+							"Ich",
+							"Du",
+							"er",
+							"sie",
+							"es"
+						);
 					}
 
 					@Override
-					public List<Rectangle> create(Object... elements) {
-						List<Rectangle> lst = new BackedList<>(memory,false);
+					public List<String> create(Object... elements) {
+						List<String> lst = new BackedList<>(memory,false);
 						for(Object o : elements)
-							lst.add((Rectangle) o);
+							lst.add((String) o);
 						return lst;
 					}
 
 					@Override
-					public Rectangle[] createArray(int length) {
-						return new Rectangle[length];
+					public String[] createArray(int length) {
+						return new String[length];
 					}
 
 					@Override
-					public Iterable<Rectangle> order(List<Rectangle> insertionOrder) {
+					public Iterable<String> order(List<String> insertionOrder) {
 						return insertionOrder;
 					}
 				})
@@ -69,6 +70,7 @@ public class CollectionTests {
 					CollectionFeature.KNOWN_ORDER,
 					CollectionFeature.SUPPORTS_ADD,
 					CollectionFeature.SUPPORTS_REMOVE,
+					CollectionFeature.SUPPORTS_ITERATOR_REMOVE,
 					ListFeature.SUPPORTS_SET,
 					ListFeature.SUPPORTS_ADD_WITH_INDEX,
 					ListFeature.SUPPORTS_REMOVE_WITH_INDEX

@@ -104,6 +104,20 @@ class VirtualMemoryTest {
 	@Test
 	@Order(5)
 	void deleteSegment() {
+		memory.createSection(2,2);
+		memory.createSection(2,2);
+		memory.get(0).write(1);
+		memory.get(0).write(2);
+		memory.get(1).write(2);
+		memory.get(1).write(1);
+		memory.deleteSegment(0);
+		assertEquals(1,memory.sectionCount());
+		assertEquals(memory.getIndex().getEndAddress(),memory.get(0).getStartAddress());
+		assertEquals(4, memory.get(0).capacity());
+		memory.get(0).jump(0);
+		assertEquals(2,memory.get(0).read());
+		assertEquals(1,memory.get(0).read());
+
 	}
 
 	@Test

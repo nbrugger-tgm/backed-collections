@@ -180,8 +180,12 @@ public class VirtualMemory {
 	}
 
 	public void deleteSegment(long index) {
-		shiftSegmentsBackwards(index+1);
-		this.index.cut(this.index.size()-getSectionHeaderSize());
+		if(index >= sectionCount() || index < 0)
+			throw new IndexOutOfBoundsException((int) index);
+		if(sectionCount() == index+1)
+			this.index.cut(index*getSectionHeaderSize());
+		else
+			shiftSegmentsBackwards(index+1);
 	}
 
 	/**

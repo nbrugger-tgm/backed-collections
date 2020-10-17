@@ -19,6 +19,8 @@ public abstract class FixedDataStore extends DataStore {
 	protected byte[] innerRead(long from, long to) {
 		if(from > maxLength() || to > maxLength())
 			throw new Section.SegmentationFault(to+" is outside the readable area (0-"+maxLength()+")");
+		if(from < 0 || to < 0)
+			throw new IndexOutOfBoundsException("Negative indices are forbidden");
 		return fixedInnerRead(from,to);
 	}
 
@@ -28,6 +30,8 @@ public abstract class FixedDataStore extends DataStore {
 	protected void innerWrite(byte[] data, long from, long to) {
 		if(to > maxLength())
 			throw new MemoryOverflowException(maxLength(), to);
+		if(from < 0 || to < 0)
+			throw new IndexOutOfBoundsException("Negative indices are forbidden");
 		fixedInnerWrite(data,from,to);
 		end = Math.max(to,end);
 	}
