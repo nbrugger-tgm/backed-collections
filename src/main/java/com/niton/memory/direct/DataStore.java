@@ -220,7 +220,7 @@ public abstract class DataStore {
 		}else{
 			while (lenght > bufferSize){
 				shift(offset,bufferSize);
-				skip(offset);
+				skip(offset+bufferSize);
 				lenght-=bufferSize;
 			}
 		}
