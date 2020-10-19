@@ -8,26 +8,30 @@ There are 3 levels of memory access:
 
 ## Native
 
-**Class : ** DataStore
+**Class :** DataStore
 
 Native access is basically extended random access. This means you directly manipulate the raw byte array. Only because its native it does not means a performance increase. Indeed semi managed includes some performance improvements, so unless you have a good concept to minimize shifting and jumping you are most likely better of using semi-managed.
 
 This layer provides: direct reading, direct writing, shifting, shift writing
 
+Implementations: ``FileStore``, `ArrayStore`
+
 ## Semi Managed
 
-**Class : ** Section
+**Class :** Section
 
 Semi Managed access manages enlargement and shifting automatically. But you still have to somehow manage them if you use multiple Sections in a dataStore. A data store needs an address to write and reads it config from/to.
 
+The maximum size of a section is defineable by setting BitSystem to `x4`,`x8`,`x16`,`x32` (bits per address)
+
 A Section needs pointer to the start of the config it needs to store.
 
-### Metadata - 16Bytes
+### Metadata - (4/8/16/32)Bytes
 
-* Blocksize: **4 Bytes**
-* end-marker: **4 Bytes**
-* start-address: **4 Bytes**
-* end-address: **4 Bytes** 
+* Blocksize: **(1/2/4/8) Bytes**
+* end-marker: **(1/2/4/8) Bytes**
+* start-address: **(1/2/4/8) Bytes**
+* end-address: **(1/2/4/8) Bytes** 
 
 This layer provides : automatic shifting and size management.
 
