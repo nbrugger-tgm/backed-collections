@@ -4,8 +4,12 @@ import com.niton.memory.direct.managed.Section;
 import com.niton.memory.direct.managed.VirtualMemory;
 import com.niton.memory.direct.stores.ArrayStore;
 import com.niton.memory.direct.DataStore;
+import com.niton.memory.direct.stores.FileStore;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 public class BackedListTest {
 	private static DataStore byteStore;
@@ -13,16 +17,26 @@ public class BackedListTest {
 	public static void main(String[] args) throws IOException {
 		//blockSize,usedSize,startAddress,endAddress
 		File f = new File("cache.dat");
-		byteStore = new ArrayStore(8*1024);
+		FileStore fs = new FileStore(f);
+		ArrayStore as = new ArrayStore(1024*1024*10);
+		for (int i = 0; i < as.maxLength(); i++) {
+			as.getData()[i] = (byte) (Math.random()*1000);
+		}
 		//testSections();
-
 		//testVirtualMemory();
-		BackedList<String> s = new BackedList<>(byteStore,false);
-		s.add("First");
-		s.add("Sekkond");
-		s.remove(0);
-		System.out.println(s);
-
+		BackedMap<String,String> str = new BackedMap<>(as,false);
+		str.put("Niton","fx");
+		System.out.println(str.get("Niton"));
+		System.out.println(str.size());
+		str.put("Nils", null);
+		str.put(null,"Nils");
+		System.out.println(str.toString());
+		str.remove(null);
+		System.out.println(str.toString());
+		str.remove("Nils");
+		System.out.println(str.toString());
+		str.remove("Niton");
+		System.out.println(str.toString());
 	}
 
 	private static void testVirtualMemory() throws IOException {
