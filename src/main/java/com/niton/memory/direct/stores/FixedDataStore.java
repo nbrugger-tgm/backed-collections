@@ -38,9 +38,10 @@ public abstract class FixedDataStore extends DataStore {
 
 	@Override
 	public long cut(long from) {
+		long oldEnd = end;
 		end = from;
 		jump(end);
-		return maxLength()-from;
+		return oldEnd-from;
 	}
 
 	protected abstract void fixedInnerWrite(byte[] data, long from, long to);

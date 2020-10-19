@@ -19,10 +19,8 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 	 */
 	public long reservedObjectSpace = 100;
 	private final VirtualMemory memory;
-	private Section metaSection;
-	private final DataOutputStream metaWriter;
-	private final DataInputStream metaReader;
-	private static final int SIZE_POINTER = 0;
+	private int increment = 10;
+
 	public BackedList(DataStore store,boolean read) {
 		this(store,new OOSSerializer<>(),read);
 	}
@@ -34,15 +32,8 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 		this.memory = new VirtualMemory(store, BitSystem.x32);
 		if(read){
 			memory.readIndex();
-			metaSection = memory.get(0);
 		}else{
-			memory.initIndex(10);
-			metaSection = memory.createSection(256,1);
-		}
-		metaReader = new DataInputStream(metaSection.openReadStream());
-		metaWriter = new DataOutputStream(metaSection.openWritingStream());
-		if (!read){
-			writeSize(0);
+			memory.initIndex(increment);
 		}
 	}
 
@@ -53,12 +44,10 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 			Object e = get(i);
 			if(o == e) {
 				remove(i);
-				sz = size();
 				return true;
 			}
 			if(o != null && e != null && e.hashCode() == o.hashCode() && o.equals(e)){
 				remove(i);
-				sz = size();
 				return true;
 			}
 		}
@@ -71,7 +60,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 			throw new IndexOutOfBoundsException("Negative indexes are not allowed");
 		if(index>=size())
 			throw new IndexOutOfBoundsException(index);
-		Section s = memory.get(index+1);
+		Section s = memory.get(index);
 		s.jump(0);
 		try {
 			return serializer.read(s.openReadStream());
@@ -105,21 +94,13 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 
 	@Override
 	public int size() {
-		return (int) (memory.sectionCount()-1);
+		return (int) (memory.sectionCount());
 //		metaSection.jump(SIZE_POINTER);
 //		try {
 //			return metaReader.readInt();
 //		} catch (IOException e) {
 //			throw new RuntimeException(e);
 //		}
-	}
-	private void writeSize(int sz){
-		metaSection.jump(SIZE_POINTER);
-		try {
-			metaWriter.writeInt(sz);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
 	}
 
 	@Override
@@ -154,8 +135,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 	@Override
 	public T remove(int index) {
 		T e = get(index);
-		memory.deleteSegment(index+1);
-		writeSize(size()-1);
+		memory.deleteSegment(index);
 		return e;
 	}
 	@Override
@@ -166,16 +146,14 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 			throw new IndexOutOfBoundsException(index);
 		Section sec;
 		if(index == size())
-			sec = memory.createOrGetSection(reservedObjectSpace,1,index+1);
+			sec = memory.createOrGetSection(reservedObjectSpace,1,index);
 		else {
-			sec = memory.insertSection(index+1,reservedObjectSpace,1);
+			sec = memory.insertSection(index,reservedObjectSpace,1);
 		}
 		try {
 			OutputStream os = sec.openWritingStream();
 			sec.jump(0);
 			serializer.write(element, os);
-			int sz = size();
-			writeSize(sz+1);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
@@ -187,7 +165,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 			throw new IndexOutOfBoundsException("Negative indizes are not allowed");
 		if(index >= size())
 			throw new IndexOutOfBoundsException(index);
-		Section sec = memory.get(index+1);
+		Section sec = memory.get(index);
 		sec.jump(0);
 		InputStream is = sec.openReadStream();
 		T elem;
@@ -204,8 +182,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 
 	@Override
 	public void clear() {
-		memory.initIndex(10);
-		metaSection = memory.createSection(256,1);
+		memory.initIndex(increment);
 	}
 
 	@Override
@@ -247,6 +224,13 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 		return new BackIter(i);
 	}
 
+	VirtualMemory getMemory() {
+		return memory;
+	}
+
+	public void setIncrementSize(int i) {
+		memory.setIndexIncrement(this.increment = i);
+	}
 
 
 	private class BackIter implements Iterator<T> , ListIterator<T>{
@@ -377,6 +361,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 				throw new IndexOutOfBoundsException(index);
 			if(index < 0)
 				throw new IndexOutOfBoundsException("Negative indizes are not allowed");
+			to--;
 			return BackedList.this.remove(index+from);
 		}
 

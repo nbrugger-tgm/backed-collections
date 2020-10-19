@@ -1,5 +1,7 @@
 package com.niton.memory.direct;
 
+import com.niton.collections.backed.Serializer;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -7,7 +9,7 @@ import java.util.*;
 import java.util.stream.*;
 
 public abstract class DataStore {
-	public int bufferSize = 1024*8;
+	public int bufferSize = 1024*4;
 	private long marker = 0;
 
 	/**
@@ -115,6 +117,30 @@ public abstract class DataStore {
 
 	public void shiftAll(long offset) {
 		shift(offset, size()- marker);
+	}
+
+	/**
+	 * @param keySerializer
+	 * @param <K>
+	 * @throws RuntimeException when reading goes wrong
+	 * @return
+	 */
+	public <K> K read(Serializer<K> keySerializer) {
+		jump(0);
+		try {
+			return keySerializer.read(openReadStream());
+		} catch (IOException | ClassNotFoundException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public <T> void write(T value, Serializer<T> valueSerializer) {
+		jump(0);
+		try {
+			valueSerializer.write(value,openWritingStream());
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 

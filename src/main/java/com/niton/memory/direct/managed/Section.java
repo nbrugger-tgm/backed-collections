@@ -262,6 +262,10 @@ public class Section extends DataStore {
 		writeToAddress(endMarkPointer,oldSize);
 	}
 
+	public void setBlockSize(long i) {
+		writeToAddress(blockSizePointer,i);
+	}
+
 	public static class SegmentationFault extends RuntimeException {
 		public SegmentationFault(String message) {
 			super(message);

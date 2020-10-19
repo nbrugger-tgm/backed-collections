@@ -118,6 +118,19 @@ class VirtualMemoryTest {
 		assertEquals(2,memory.get(0).read());
 		assertEquals(1,memory.get(0).read());
 
+
+		memory.initIndex(2);
+		memory.createSection(1,1);
+		memory.createSection(1,1);
+		memory.createSection(1,1);
+		memory.get(0).write(1);
+		memory.get(1).write(2);
+		memory.get(2).write(3);
+		memory.deleteSegment(0);
+		assertEquals(2, memory.get(0).read());
+		assertEquals(3, memory.get(1).read());
+		memory.deleteSegment(1);
+		assertEquals(3, memory.get(0).read());
 	}
 
 	@Test

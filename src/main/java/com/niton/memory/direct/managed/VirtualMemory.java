@@ -198,6 +198,7 @@ public class VirtualMemory {
 		index.shiftAll(-getSectionHeaderSize());
 		index.cut(index.size()-getSectionHeaderSize());
 		readIndex();
+		data.cut(get(sectionCount()-1).getEndAddress());
 	}
 
 	public Section insertSection(int i,long blockSize,long initialBlocks) {
@@ -250,5 +251,10 @@ public class VirtualMemory {
 
 	public BitSystem getBits() {
 		return bits;
+	}
+
+
+	public void setIndexIncrement(int i) {
+		getIndex().setBlockSize(i*getSectionHeaderSize());
 	}
 }
