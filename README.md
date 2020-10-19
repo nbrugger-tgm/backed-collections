@@ -45,7 +45,7 @@ List<String> l = new BackedList(store,false);
     * File
     * Stack/Heap (RAM)
 * Using a File for multiple collections
-* Managed Random access [more](VirtualMemory.md) (kind of the lower level of this lib -> powerfull)
+* Managed Random access [more](Java Direct-Memory.md) (kind of the lower level of this lib -> powerfull)
 * Open Interfaces(/abstract classes) for everyone
     * Create Custom `DataStore`s (Like `FileStore` or `ArrayStore`)
     * Custom Serializers
