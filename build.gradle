@@ -12,7 +12,7 @@ plugins {
     id 'maven-publish'
 }
 version = "1.0.2-SNAPSHOT"
-
+group = "com.niton"
 repositories {
     // Use jcenter for resolving dependencies.
     // You can declare any Maven/Ivy/file repository here.
@@ -21,6 +21,35 @@ repositories {
 java {
     sourceCompatibility JavaVersion.VERSION_1_9
     targetCompatibility JavaVersion.VERSION_1_9
+    withJavadocJar()
+    withSourcesJar()
+}
+publishing {
+    publications {
+        gpr(MavenPublication) {
+            from(components.java)
+            pom {
+                name = 'My Library'
+                description = 'A lib to create Maps and Lists that store their data anywere you want (e.g. Files)'
+                developers {
+                    developer {
+                        id = 'nbugger'
+                        email = 'nbrugger@student.tgm.ac.at'
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/nbrugger-tgm/backed-collections")
+            credentials {
+                username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+                password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
+            }
+        }
+    }
 }
 
 dependencies {
