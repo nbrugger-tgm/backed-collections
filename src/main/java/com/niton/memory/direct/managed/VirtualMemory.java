@@ -186,6 +186,7 @@ public class VirtualMemory {
 			this.index.cut(index*getSectionHeaderSize());
 		else
 			shiftSegmentsBackwards(index+1);
+		sectionCache.remove(index);
 	}
 
 	/**
@@ -202,6 +203,9 @@ public class VirtualMemory {
 	}
 
 	public Section insertSection(int i,long blockSize,long initialBlocks) {
+		if(i == sectionCount()) {
+			return createSection(blockSize,initialBlocks);
+		}
 		long mvSize = blockSize*initialBlocks;
 
 		Section old = get(i);

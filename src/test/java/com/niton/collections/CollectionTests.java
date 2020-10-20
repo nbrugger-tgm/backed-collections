@@ -34,10 +34,13 @@ public class CollectionTests {
 		return new CollectionTests().allTests();
 	}
 
+
+
+	@org.junit.Test
 	public junit.framework.Test allTests() {
 		try {
 		TestSuite suite =
-				new TestSuite("com.niton.collection.backed");
+				new TestSuite("Backed Collections Tests");
 			suite.addTest(testBackedList());
 			suite.addTest(testBackedMap());
 			return suite;
@@ -53,7 +56,7 @@ public class CollectionTests {
 					@Override
 					public SampleElements<Map.Entry<String, String>> samples() {
 						return new SampleElements<>(
-								new AbstractMap.SimpleEntry<>("Nils","Brugger"),
+								new AbstractMap.SimpleEntry<>("Nils","Java"),
 								new AbstractMap.SimpleEntry<>("Anna", "Brugger"),
 								new AbstractMap.SimpleEntry<>("Bernhard","Hickel"),
 								new AbstractMap.SimpleEntry<>("Ilse","szabo"),
@@ -99,7 +102,8 @@ public class CollectionTests {
 						ALLOWS_ANY_NULL_QUERIES,
 						ALLOWS_NULL_VALUES,
 						ALLOWS_NULL_KEYS,
-						SUPPORTS_PUT
+						SUPPORTS_PUT,
+						SUPPORTS_ITERATOR_REMOVE
 				).createTestSuite();
 	}
 

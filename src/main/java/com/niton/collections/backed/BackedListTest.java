@@ -7,9 +7,7 @@ import com.niton.memory.direct.DataStore;
 import com.niton.memory.direct.stores.FileStore;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 public class BackedListTest {
 	private static DataStore byteStore;
@@ -30,12 +28,11 @@ public class BackedListTest {
 		System.out.println(str.size());
 		str.put("Nils", null);
 		str.put(null,"Nils");
+		System.out.println(str.entrySet());
 		System.out.println(str.toString());
-		str.remove(null);
-		System.out.println(str.toString());
-		str.remove("Nils");
-		System.out.println(str.toString());
-		str.remove("Niton");
+		Set nullSingelton = new HashSet();
+		nullSingelton.add(null);
+		str.entrySet().retainAll(nullSingelton);
 		System.out.println(str.toString());
 	}
 

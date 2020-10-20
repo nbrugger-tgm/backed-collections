@@ -2,14 +2,14 @@ package com.niton.collections.backed;
 
 import java.io.*;
 import java.util.*;
+import java.util.Map.Entry;
 
 import com.niton.memory.direct.DataStore;
 import com.niton.memory.direct.managed.*;
 
 public class BackedMap<K,V> extends AbstractMap<K,V> {
-	private static final long POOL_ADDR_SIZE = 4+4/*KEY_INDEX,VALUE_INDEX*/;
 	/**
-	 * This section holds all the KEY HASHES and maps them to an int which is representing the index of the pool Segment fot that hash
+	 * This section holds all the KEY HASHES and maps them to an int which is representing the count of keys associated for that hash
 	 */
 	private final Section keyHashes;
 	private final VirtualMemory
@@ -20,49 +20,42 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 			/**
 			 * Stores the key Object values
 			 */
-			keySegment,
-			/**
-			 * stores the hash-pools. A hash pool is map of a references to keySegments where the key data is stored and the index of the data segment
-			 */
-			poolSegment;
+			keySegment;
 	public int KEY_SIZE_ALLOC = 20;
 	public int VALUE_SIZE_ALLOC = 128;
 	public final static int KEY_HASH_PAIR_SIZE = 8+4;
 
-	public BackedMap(DataStore mem, boolean read) {
-		this(mem,new OOSSerializer<>(),new OOSSerializer<>(),read);
+	public BackedMap(DataStore mainMemory, boolean read) {
+		this(mainMemory,new OOSSerializer<>(),new OOSSerializer<>(),read);
 	}
 
-	public BackedMap(DataStore mem, Serializer<K> keySerializer, Serializer<V> valueSerializer, boolean read) {
-		this.mem = new VirtualMemory(mem,BitSystem.x32);
+	public BackedMap(DataStore mainMemory, Serializer<K> keySerializer, Serializer<V> valueSerializer, boolean read) {
+		this.mainMemory = new VirtualMemory(mainMemory,BitSystem.x32);
 		this.keySerializer = keySerializer;
 		this.valueSerializer = valueSerializer;
 		if(read) {
-			this.mem.readIndex();
+			this.mainMemory.readIndex();
+			keyHashes = this.mainMemory.get(0);
 		}else{
-			this.mem.initIndex(128);
-			this.mem.createSection(KEY_HASH_PAIR_SIZE, 10);
-			this.mem.createSection(VALUE_SIZE_ALLOC,10);//VALUE_SEGMENT
-			this.mem.createSection(KEY_SIZE_ALLOC, 10); //KEY_SEGMENT
-			this.mem.createSection(POOL_ADDR_SIZE, 10);//POOL_SEGMENT
+			//Create Memory Structure
+			this.mainMemory.initIndex(128);
+			keyHashes = this.mainMemory.createSection(KEY_HASH_PAIR_SIZE, 10);
+			this.mainMemory.createSection(VALUE_SIZE_ALLOC,10);//VALUE_SEGMENT
+			this.mainMemory.createSection(KEY_SIZE_ALLOC, 10); //KEY_SEGMENT
 		}
-		keyHashes = this.mem.get(0);
-		dataSegment = new VirtualMemory(this.mem.get(1));
-		keySegment = new VirtualMemory(this.mem.get(2));
-		poolSegment = new VirtualMemory(this.mem.get(3));
+		dataSegment = new VirtualMemory(this.mainMemory.get(1));
+		keySegment = new VirtualMemory(this.mainMemory.get(2));
 		if(!read){
 			//16 can be tweaked for performance
 			dataSegment.initIndex(16);
 			keySegment.initIndex(16);
-			poolSegment.initIndex(16);
 		}else{
 			dataSegment.readIndex();
 			keySegment.readIndex();
-			poolSegment.readIndex();
 		}
 	}
 
-	private final VirtualMemory mem;
+	private final VirtualMemory mainMemory;
 	private final Serializer<K> keySerializer;
 	private final Serializer<V> valueSerializer;
 
@@ -72,11 +65,11 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 			int s = 0;
 			DataInputStream dis = new DataInputStream(keyHashes.openReadStream());
 			keyHashes.jump(0);
-			for(int i = 0; i< getHashPoolCount(); i++){
-				dis.skip(8);
-				long poolIndex = dis.readInt();
-				Section pool = poolSegment.get(poolIndex);
-				s += pool.size()/POOL_ADDR_SIZE;
+			int pools = getHashPoolCount();
+			for(int i = 0; i< pools; i++){
+				keyHashes.skip(8);
+				long poolSize = dis.readInt();
+				s += poolSize;
 			}
 			return s;
 		}catch (IOException e){
@@ -90,93 +83,104 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 
 	@Override
 	public V put(K key, V value) {
-		try {
+		if(containsKey(key)){
 			V old = get(key);
-			if(containsKey(key)){
-				dataSegment.get(dataIndexOf(key)).write(value,valueSerializer);
-			}else {
-				long keyHash = key == null ? 0 : key.hashCode();
-				Section hashPool = getOrCreateHashPool(keyHash);
-				int keyStoreIndex = (int) keySegment.sectionCount();
-				Section keyStore = keySegment.createSection(KEY_SIZE_ALLOC / 4, 4);
-				int valueStoreIndex = (int) dataSegment.sectionCount();
-				Section valueStore = dataSegment.createSection(VALUE_SIZE_ALLOC / 4, 4);
-				DataOutputStream hashPoolWriter = new DataOutputStream(hashPool.openWritingStream());
-				hashPool.jumpToEnd();
-				hashPoolWriter.writeInt(keyStoreIndex);
-				hashPoolWriter.writeInt(valueStoreIndex);
-				hashPoolWriter.flush();
-				hashPoolWriter.close();
-				keyStore.write(key,keySerializer);
-				valueStore.write(value,valueSerializer);
-			}
+			dataSegment.get(getKeyIndex(key)).write(value,valueSerializer);
 			return old;
+		}else{
+			long keyHash = key == null ? 0 : key.hashCode();
+			int[] poolInfo = getHashPoolInfo(keyHash);
+			if(poolInfo.length == 0){
+				createHashPool(keyHash,1);
+				poolInfo = getHashPoolInfo(keyHash);
+			}else{
+				alterHashPoolSize(poolInfo[0],1);
+				poolInfo[2] += 1;
+			}
+			Section keyStore = keySegment.insertSection(poolInfo[2],KEY_SIZE_ALLOC / 4, 4);
+			Section valueStore = dataSegment.insertSection(poolInfo[2],VALUE_SIZE_ALLOC / 4, 4);
+			keyStore.write(key,keySerializer);
+			valueStore.write(value,valueSerializer);
+			return null;
+		}
+	}
+
+	private void alterHashPoolSize(int address, int enlargement) {
+		DataInputStream dis = new DataInputStream(keyHashes.openReadStream());
+		DataOutputStream dos = new DataOutputStream(keyHashes.openWritingStream());
+		keyHashes.jump(address+8);
+		try {
+			int old = dis.readInt();
+			keyHashes.jump(address+8);
+			dos.writeInt(old+enlargement);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
-	private int dataIndexOf(Object key) {
+	private void createHashPool(long hash,int size) {
+		DataOutputStream dos = new DataOutputStream(keyHashes.openWritingStream());
+		keyHashes.jumpToEnd();
 		try {
-			long hash=key == null?0:key.hashCode();
-			Section pool = getHashPool(hash);
-			if(pool == null)
-				return -1;
-			DataInputStream poolReader = new DataInputStream(pool.openReadStream());
-			long poolEntries = pool.size()/POOL_ADDR_SIZE;
-			if(poolEntries == 1) {
-				pool.jump(POOL_ADDR_SIZE/2);
-				return poolReader.readInt();
-			}else {
-				for (int i = 0; i < poolEntries; i++) {
-					pool.jump(i * POOL_ADDR_SIZE);
-					K oneKey = keySerializer.read(keySegment.get(poolReader.readInt()).openReadStream());
-					if (Objects.equals(oneKey,key))
-						return poolReader.readInt();
-				}
-				return -1;
-			}
-		} catch (IOException | ClassNotFoundException e) {
+			dos.writeLong(hash);
+			dos.writeInt(size);
+		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	private int getKeyIndex(Object key) {
+		int[] info = getHashPoolInfo(key == null ? 0 : key.hashCode());
+		if(info.length == 0)
+			return -1;
+		//addr,start,end
+		if(info[1] == info[2])
+			return info[1];
+		for (int i = info[1]; i <= info[2]; i++) {
+			K curr = keySegment.get(i).read(keySerializer);
+			if(Objects.equals(curr, key))
+				return i;
+		}
+		return -1;
+	}
+
+	/**
+	 * @param hash
+	 * @return array of infos
+	 * <code>
+	 *      [0] = HashPool Addresses
+	 *      [1] = Pool Start Index
+	 *      [2] = pool End Index
+	 * </code>
+	 */
+	private int[] getHashPoolInfo(long hash) {
+		int from = 0;
+		int pools = getHashPoolCount();
+		DataInputStream poolReader = new DataInputStream(keyHashes.openReadStream());
+		keyHashes.jump(0);
+		try {
+			for (int i = 0; i < pools; i++) {
+				long poolHash = poolReader.readLong();
+				int size = poolReader.readInt();
+				if(poolHash == hash){
+					return new int[]{i*KEY_HASH_PAIR_SIZE,from,from+size-1};
+				}else{
+					from += size;
+				}
+			}
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		return new int[0];
 	}
 
 
 	@Override
 	public V get(Object key) {
-		long i = dataIndexOf(key);
+		long i = getKeyIndex(key);
 		if(i==-1)
 			return null;
 		else return dataSegment.get(i).read(valueSerializer);
-	}
-
-	private Section getOrCreateHashPool(long keyHash) {
-		Section s = getHashPool(keyHash);
-		if(s == null)
-			return createHashPool(keyHash);
-		else
-			return s;
-	}
-	private Section getHashPool(long keyHash) {
-		long i;
-		return (i = getHashPoolIndex(keyHash)) == -1 ? null : poolSegment.get(i);
-	}
-
-	private Section createHashPool(long keyHash) {
-		try {
-			long cnt = getHashPoolCount();
-			DataOutputStream dos = new DataOutputStream(keyHashes.openWritingStream());
-			keyHashes.jumpToEnd();
-			dos.writeLong(keyHash);
-			dos.writeInt((int)cnt);
-			dos.flush();
-			dos.close();
-
-			//4 is subject to change for performance
-			return poolSegment.createOrGetSection(POOL_ADDR_SIZE, 4,cnt);
-		}catch (IOException e) {
-			throw new RuntimeException(e);
-		}
 	}
 
 	@Override
@@ -193,96 +197,53 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 	public void clear() {
 		dataSegment.initIndex(16);
 		keySegment.initIndex(16);
-		poolSegment.initIndex(16);
 		keyHashes.cut(0);
 	}
 
 	@Override
 	public V remove(Object key) {
-		try{
-			V val = get(key);
-			long hash = key == null ? 0: key.hashCode();
-			int poolIndex= getHashPoolIndex(hash);
-			if(poolIndex == -1)
-				return null;
-			Section hashPool = poolSegment.get(poolIndex);
-			DataInputStream poolReader = new DataInputStream(hashPool.openReadStream());
-			int keysWithThisHash = (int) (hashPool.size()/POOL_ADDR_SIZE);
-			long keyIndex = 0,valueIndex = 0;
-			hashPool.jump(0);
-			if(keysWithThisHash > 1){
-				for (int i = 0; i < keysWithThisHash; i++) {
-					keyIndex = poolReader.readInt();
-					Section keyStore = keySegment.get(keyIndex);
-					K keyI = keyStore.read(keySerializer);
-					if(Objects.equals(key, keyI)){
-						valueIndex = poolReader.readInt();
-						hashPool.shiftAll(-POOL_ADDR_SIZE);
-						if(hashPool.size() == 0) {
-							removeHashPool(hash,poolIndex);
-						}
-						break;
-					}else if (i+1 == keysWithThisHash)
-						return null;
-				}
-			}else{
-				keyIndex = poolReader.readInt();
-				valueIndex = poolReader.readInt();
-				removeHashPool(hash,poolIndex);
-			}
-
-			keySegment.deleteSegment(keyIndex);
-			dataSegment.deleteSegment(valueIndex);
-			return val;
-		}catch (IOException e){
-			throw new RuntimeException(e);
-		}
-	}
-
-	private void removeHashPool(long hash, int poolIndex) {
-		try {
-			poolSegment.deleteSegment(poolIndex);
-			DataInputStream dis = new DataInputStream(keyHashes.openReadStream());
-			int size = getHashPoolCount();
-			for (int i = 0; i < size; i++) {
-				keyHashes.jump(i*KEY_HASH_PAIR_SIZE);
-				long currentHash = dis.readLong();
-				if(currentHash == hash) {
-					keyHashes.skip(4);
-					keyHashes.shiftAll(-KEY_HASH_PAIR_SIZE);
-					keyHashes.cut(keyHashes.size()-KEY_HASH_PAIR_SIZE);
-					return;
-				}
-				keyHashes.skip(4);
-			}
-			throw new RuntimeException("Couldnt find hash link");
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-	}
-	private int getHashPoolIndex(long keyHash) {
-		try {
-			DataInputStream dis = new DataInputStream(keyHashes.openReadStream());
-			int keyPools = getHashPoolCount();
-			keyHashes.jump(0);
-			for(int i = 0;i<keyPools;i++){
-				long hash = dis.readLong();
-				int poolIndex = dis.readInt();
-				if(hash == keyHash){
-					return poolIndex;
-				}
-			}
-			dis.close();
-			return -1;
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+		V val = get(key);
+		long hash = key == null ? 0: key.hashCode();
+		int[] poolInfo = getHashPoolInfo(hash);
+		int poolIndex = getKeyIndex(key);
+		if(poolIndex == -1)
+			return null;
+		dataSegment.deleteSegment(poolIndex);
+		keySegment.deleteSegment(poolIndex);
+		alterHashPoolSize(poolInfo[0],-1);
+		return val;
 	}
 	private interface IteratorSupplier<T>{
 		Iterator<T> newIterator();
 	}
 	private class IteratorSet<T> extends AbstractSet<T> {
 
+		@Override
+		public boolean retainAll(Collection<?> c) {
+			if(c == null)
+				throw new NullPointerException();
+			if(c.size() == 0){
+				int old = BackedMap.this.size();
+				BackedMap.this.clear();
+				return old > BackedMap.this.size();
+			}
+			boolean result = false;
+			Iterator<T> iter = iterator();
+			outer: while(iter.hasNext()) {
+				T kvEntry = iter.next();
+				for (Object o : c) {
+					if(o == null) {
+						if (kvEntry == null)
+							continue outer;
+					} else if(o.equals(kvEntry)){
+						continue outer;
+					}
+				}
+				iter.remove();
+				result = true;
+			}
+			return result;
+		}
 
 		private final IteratorSupplier<T> iter;
 
@@ -293,7 +254,7 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 		@Override
 		public boolean remove(Object o) {
 			if(o instanceof Entry) {
-				boolean ret = contains(((Entry<?, ?>) o).getKey());
+				boolean ret = BackedMap.this.containsKey(((Entry<?, ?>) o).getKey());
 				BackedMap.this.remove(((Entry<?,?>) o).getKey());
 				return ret;
 			}
@@ -378,19 +339,6 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 		}
 	}
 
-	private K getKey(int hashPool, int posInPool) {
-		try {
-			Section pool = getHashPool(hashPool);
-			if(pool == null)
-				return null;
-			DataInputStream dis = new DataInputStream(pool.openReadStream());
-			pool.jump(posInPool*POOL_ADDR_SIZE);
-			Section key = keySegment.get(dis.readInt());
-			return key.read(keySerializer);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-	}
 
 	private class MutableEntry implements Entry<K, V> {
 		private K key;
@@ -429,6 +377,11 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 		@Override
 		public int hashCode() {
 			return (key == null ? 0 : key.hashCode())^(valueCache == null ? 0 : valueCache.hashCode());
+		}
+
+		@Override
+		public String toString() {
+			return String.format("%s=%s", key,valueCache);
 		}
 	}
 }

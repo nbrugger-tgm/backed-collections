@@ -11,6 +11,7 @@ plugins {
     id 'java-library'
     id 'maven-publish'
 }
+version = "1.0.2-SNAPSHOT"
 
 repositories {
     // Use jcenter for resolving dependencies.
