@@ -1,5 +1,7 @@
 # Backed Collections
-![Java JUnit Test with Gradle](https://github.com/nbrugger-tgm/backed-collections/workflows/Java%20JUnit%20Test%20with%20Gradle/badge.svg?branch=master)
+![Java JUnit Test with Gradle](https://github.com/nbrugger-tgm/backed-collections/workflows/Java%20JUnit%20Test%20with%20Gradle/badge.svg?branch=master)<br>
+[![nbrugger-tgm](https://circleci.com/gh/nbrugger/backed-collections.svg?style=svg)](https://circleci.com/gh/nbrugger/backed-collections)<br>
+![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/nbrugger-tgm/backed-collections?include_prereleases)<br>
 This lib provides (currently) a backed list and map implementation.
 ### Example
 Creating a map backed by a file
