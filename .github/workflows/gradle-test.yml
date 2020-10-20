@@ -5,9 +5,9 @@ name: Java JUnit Test with Gradle
 
 on:
   push:
-    branches: [ master ]
+    branches: all
   pull_request:
-    branches: [ master ]
+    branches: all
 
 jobs:
   build:
