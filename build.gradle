@@ -70,7 +70,9 @@ publishing {
             url = uri("https://api.bintray.com/maven/nbrugger-tgm/java-libs/backed-collections/;publish=1")
             credentials {
                 username = "nbrugger-tgm"
-                password = System.getenv("BINTRAY_TOKEN") ?: new File("TOKENS").readLines().get(0)
+                password = System.getenv("BINTRAY_TOKEN")
+                if(password == null)
+                    password = new File("TOKENS").readLines().get(0)
             }
         }
     }
