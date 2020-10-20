@@ -3,11 +3,7 @@
 
 name: Java JUnit Test with Gradle
 
-on:
-  push:
-    branches: all
-  pull_request:
-    branches: all
+on: [push, pull_request]
 
 jobs:
   build:
