@@ -1,4 +1,5 @@
 # Backed Collections
+![Java JUnit Test with Gradle](https://github.com/nbrugger-tgm/backed-collections/workflows/Java%20JUnit%20Test%20with%20Gradle/badge.svg?branch=master)
 This lib provides (currently) a backed list and map implementation.
 ### Example
 Creating a map backed by a file
