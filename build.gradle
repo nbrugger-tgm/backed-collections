@@ -10,14 +10,30 @@ plugins {
     // Apply the java-library plugin to add support for Java Library
     id 'java-library'
     id 'maven-publish'
+	//id "com.jfrog.bintray" version "1.+"
 }
-version = "1.0.2-SNAPSHOT"
+version = "1.1.0"
 group = "com.niton"
 repositories {
     // Use jcenter for resolving dependencies.
     // You can declare any Maven/Ivy/file repository here.
     jcenter()
 }
+/*
+bintray {
+    user = 'nbrugger-tgm'
+    key = System.getenv("BINTRAY_TOKEN") ?: new File("TOKENS").readLines().get(0)
+	pkg {
+        repo = 'java-libs'
+        name = 'backed-collections'
+        licenses = ['Apache-2.0']
+        vcsUrl = 'https://github.com/'+user+'/'+name+'.git'
+		version {
+			name = version
+		}
+    }
+}
+*/
 java {
     sourceCompatibility JavaVersion.VERSION_1_9
     targetCompatibility JavaVersion.VERSION_1_9
@@ -46,6 +62,15 @@ publishing {
             credentials {
                 username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
                 password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
+            }
+        }
+		
+		maven {
+            name = "Bintray"
+            url = uri("https://api.bintray.com/maven/nbrugger-tgm/java-libs/backed-collections/;publish=1")
+            credentials {
+                username = "nbrugger-tgm"
+                password = System.getenv("BINTRAY_TOKEN") ?: new File("TOKENS").readLines().get(0)
             }
         }
     }

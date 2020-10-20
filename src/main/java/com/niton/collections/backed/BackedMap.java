@@ -2,7 +2,6 @@ package com.niton.collections.backed;
 
 import java.io.*;
 import java.util.*;
-import java.util.Map.Entry;
 
 import com.niton.memory.direct.DataStore;
 import com.niton.memory.direct.managed.*;
@@ -21,8 +20,8 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 			 * Stores the key Object values
 			 */
 			keySegment;
-	public int KEY_SIZE_ALLOC = 20;
-	public int VALUE_SIZE_ALLOC = 128;
+	public int KEY_SIZE_ALLOC = 128;
+	public int VALUE_SIZE_ALLOC = 512;
 	public final static int KEY_HASH_PAIR_SIZE = 8+4;
 
 	public BackedMap(DataStore mainMemory, boolean read) {
@@ -38,17 +37,17 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 			keyHashes = this.mainMemory.get(0);
 		}else{
 			//Create Memory Structure
-			this.mainMemory.initIndex(128);
-			keyHashes = this.mainMemory.createSection(KEY_HASH_PAIR_SIZE, 10);
-			this.mainMemory.createSection(VALUE_SIZE_ALLOC,10);//VALUE_SEGMENT
-			this.mainMemory.createSection(KEY_SIZE_ALLOC, 10); //KEY_SEGMENT
+			this.mainMemory.initIndex(3);
+			keyHashes = this.mainMemory.createSection(KEY_HASH_PAIR_SIZE, 512);
+			this.mainMemory.createSection(VALUE_SIZE_ALLOC+keyHashes.getHeaderSize(),512);//VALUE_SEGMENT
+			this.mainMemory.createSection(KEY_SIZE_ALLOC+keyHashes.getHeaderSize(), 512); //KEY_SEGMENT
 		}
 		dataSegment = new VirtualMemory(this.mainMemory.get(1));
 		keySegment = new VirtualMemory(this.mainMemory.get(2));
 		if(!read){
 			//16 can be tweaked for performance
-			dataSegment.initIndex(16);
-			keySegment.initIndex(16);
+			dataSegment.initIndex(128);
+			keySegment.initIndex(128);
 		}else{
 			dataSegment.readIndex();
 			keySegment.readIndex();
@@ -58,6 +57,17 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 	private final VirtualMemory mainMemory;
 	private final Serializer<K> keySerializer;
 	private final Serializer<V> valueSerializer;
+
+
+	public BackedMap<K, V> setKEY_SIZE_ALLOC(int KEY_SIZE_ALLOC) {
+		this.KEY_SIZE_ALLOC = KEY_SIZE_ALLOC;
+		return this;
+	}
+
+	public BackedMap<K, V> setVALUE_SIZE_ALLOC(int VALUE_SIZE_ALLOC) {
+		this.VALUE_SIZE_ALLOC = VALUE_SIZE_ALLOC;
+		return this;
+	}
 
 	@Override
 	public int size() {

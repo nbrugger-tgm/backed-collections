@@ -5,7 +5,9 @@ import com.niton.memory.direct.managed.VirtualMemory;
 import com.niton.memory.direct.stores.ArrayStore;
 import com.niton.memory.direct.DataStore;
 import com.niton.memory.direct.stores.FileStore;
+import org.w3c.dom.css.Rect;
 
+import java.awt.*;
 import java.io.*;
 import java.util.*;
 
@@ -13,27 +15,26 @@ public class BackedListTest {
 	private static DataStore byteStore;
 
 	public static void main(String[] args) throws IOException {
-		//blockSize,usedSize,startAddress,endAddress
 		File f = new File("cache.dat");
 		FileStore fs = new FileStore(f);
-		ArrayStore as = new ArrayStore(1024*1024*10);
-		for (int i = 0; i < as.maxLength(); i++) {
-			as.getData()[i] = (byte) (Math.random()*1000);
-		}
+		//ArrayStore as = new ArrayStore(1024*1024*10);
+		//for (int i = 0; i < as.maxLength(); i++) {
+		//	as.getData()[i] = (byte) (Math.random()*1000);
+		//}
 		//testSections();
 		//testVirtualMemory();
-		BackedMap<String,String> str = new BackedMap<>(as,false);
-		str.put("Niton","fx");
-		System.out.println(str.get("Niton"));
-		System.out.println(str.size());
-		str.put("Nils", null);
-		str.put(null,"Nils");
-		System.out.println(str.entrySet());
-		System.out.println(str.toString());
-		Set nullSingelton = new HashSet();
-		nullSingelton.add(null);
-		str.entrySet().retainAll(nullSingelton);
-		System.out.println(str.toString());
+		fs.bufferSize = 1024*2;
+		VirtualMemory splitter = new VirtualMemory(fs);
+		//splitter.initIndex(100);
+		splitter.readIndex();
+		BackedMap<Rectangle, Rectangle> str = new BackedMap<>(splitter.createOrGetSection(2048, 3,0), true);
+		//str.clear();
+		//for (int i = 0; i < 10; i++) {
+		//	System.out.println(i);
+		//	str.put(new Rectangle((int)((i*Math.random())),((int)(i*Math.random())),((int)(i*Math.random())),((int)(i*Math.random()))),new Rectangle((int)(i*Math.random()),(int)(i*Math.random()),(int)(i*Math.random()),(int)(i*Math.random())));
+		//}
+		System.out.println(str);
+
 	}
 
 	private static void testVirtualMemory() throws IOException {
