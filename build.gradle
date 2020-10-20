@@ -21,7 +21,7 @@ repositories {
 java {
     sourceCompatibility JavaVersion.VERSION_1_9
     targetCompatibility JavaVersion.VERSION_1_9
-    withJavadocJar()
+    //withJavadocJar()
     withSourcesJar()
 }
 publishing {
@@ -29,7 +29,6 @@ publishing {
         gpr(MavenPublication) {
             from(components.java)
             pom {
-                name = 'My Library'
                 description = 'A lib to create Maps and Lists that store their data anywere you want (e.g. Files)'
                 developers {
                     developer {
