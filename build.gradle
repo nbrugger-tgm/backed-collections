@@ -72,7 +72,7 @@ publishing {
                 username = "nbrugger-tgm"
 				def pwdFile = new File("TOKENS")
 				if(pwdFile.exists())
-                    password = .readLines().get(0)
+                    password = pwdFile.readLines().get(0)
                 else
 					password = System.getenv("BINTRAY_TOKEN")
             }
