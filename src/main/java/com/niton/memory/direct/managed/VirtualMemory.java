@@ -28,6 +28,13 @@ public class VirtualMemory {
 	public VirtualMemory(DataStore data,BitSystem bits) {
 		this.data = data;
 		this.bits = bits;
+		mainDos = new DataOutputStream(data.new DataStoreOutputStream());
+		mainDis = new DataInputStream(data.new DataStoreInputStream());
+		data.jump(0);
+		writeNumber(mainDos,0);
+		writeNumber(mainDos, 0);
+		writeNumber(mainDos, 0);
+		writeNumber(mainDos, 0);
 		index = new Section(0, data,bits){
 			@Override
 			public String toString() {
@@ -64,8 +71,6 @@ public class VirtualMemory {
 		};
 		indexDos = new DataOutputStream(index.new DataStoreOutputStream());
 		indexDis = new DataInputStream(index.new DataStoreInputStream());
-		mainDos = new DataOutputStream(data.new DataStoreOutputStream());
-		mainDis = new DataInputStream(data.new DataStoreInputStream());
 	}
 
 	public Section getIndex() {
@@ -115,6 +120,7 @@ public class VirtualMemory {
 		writeNumber(indexDos,blockSize);
 		writeNumber(indexDos,0);     //currentSize
 		writeNumber(indexDos,sect.getStartAddress()+blockSize*initialBlocks); //end
+		sect.refreshCaches();
 		return sect;
 	}
 

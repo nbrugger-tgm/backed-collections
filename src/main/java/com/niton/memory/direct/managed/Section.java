@@ -5,6 +5,7 @@ import com.niton.memory.direct.DataStore;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.Objects;
 
 public class Section extends DataStore {
 	public BitSystem getBit() {
@@ -36,6 +37,7 @@ public class Section extends DataStore {
 	public byte shiftFlag = SHIFT_START_AND_END;
 	private DataInputStream dis;
 	private DataOutputStream dos;
+	private transient long startAddress,endAddress,endMark,blockSize;
 	//blockSize,usedSize,startAddress,endAddress
 	public Section(int configAddress, DataStore store,BitSystem system) {
 		this(store,configAddress,configAddress+=system.getBase(),configAddress+=system.getBase(),configAddress+system.getBase(),system);
@@ -52,12 +54,12 @@ public class Section extends DataStore {
 	public Section(DataStore store, long blockSizePointer, long endMarkPointer, long startAddressPointer, long endAddressPointer, BitSystem system) {
 		this.bit = system;
 		this.store = store;
-		this.blockSizePointer = blockSizePointer;
-		this.endMarkPointer = endMarkPointer;
-		this.startAddressPointer = startAddressPointer;
-		this.endAddressPointer = endAddressPointer;
 		dis = new DataInputStream(store.new DataStoreInputStream());
 		dos = new DataOutputStream(store.new DataStoreOutputStream());
+		setBlockSizePointer(blockSizePointer);
+		setEndMarkPointer(endMarkPointer);
+		setStartAddressPointer(startAddressPointer);
+		setEndAddressPointer(endAddressPointer);
 	}
 
 	public long getBlockSizePointer() {
@@ -66,6 +68,7 @@ public class Section extends DataStore {
 
 	public void setBlockSizePointer(long blockSizePointer) {
 		this.blockSizePointer = blockSizePointer;
+		blockSize = readFromAddress(blockSizePointer);
 	}
 
 	public long getEndMarkPointer() {
@@ -74,6 +77,7 @@ public class Section extends DataStore {
 
 	public void setEndMarkPointer(long endMarkPointer) {
 		this.endMarkPointer = endMarkPointer;
+		endMark = readFromAddress(endMarkPointer);
 	}
 
 	public long getStartAddressPointer() {
@@ -82,6 +86,7 @@ public class Section extends DataStore {
 
 	public void setStartAddressPointer(long startAddressPointer) {
 		this.startAddressPointer = startAddressPointer;
+		startAddress = readFromAddress(startAddressPointer);
 	}
 
 	public long getEndAddressPointer() {
@@ -90,28 +95,35 @@ public class Section extends DataStore {
 
 	public void setEndAddressPointer(long endAddressPointer) {
 		this.endAddressPointer = endAddressPointer;
+		endAddress = readFromAddress(endAddressPointer);
 	}
 
 	@Override
 	public long size() {
-		return readFromAddress(endMarkPointer);
+		return endMark;
 	}
 
 
 	public void init(long blockSize, long initialBLocks, long startAddress){
-		writeToAddress(startAddressPointer, startAddress);
-		writeToAddress(endMarkPointer, 0);
-		writeToAddress(blockSizePointer, blockSize);
-		writeToAddress(endAddressPointer, startAddress+(blockSize*initialBLocks));
+		setStartAddress(startAddress);
+		setEndMarker(0);
+		setBlockSize(blockSize);
+		setEndAddress(startAddress+(blockSize*initialBLocks));
 	}
+
+	private void setStartAddress(long startAddress) {
+		this.startAddress = startAddress;
+		writeToAddress(startAddressPointer, startAddress);
+	}
+
 	public long getBlockSize(){
-		return readFromAddress(blockSizePointer);
+		return blockSize;
 	}
 	public long getEndAddress(){
-		return readFromAddress(endAddressPointer);
+		return endAddress;
 	}
 	public long getStartAddress(){
-		return readFromAddress(startAddressPointer);
+		return startAddress;
 	}
 
 	private long readFromAddress(long address) {
@@ -137,7 +149,7 @@ public class Section extends DataStore {
 	protected byte[] innerRead(long from, long to) {
 		if(from < 0 || to > getEndAddress())
 			throw new SegmentationFault("Read outside the section (Sect: "+getStartAddress()+" - "+getEndAddress()+") READ: "+from+" - "+to);
-		long start = readFromAddress(startAddressPointer);
+		long start = getStartAddress();
 		jump(to);
 		return store.read(start+from,start+to);
 	}
@@ -146,9 +158,9 @@ public class Section extends DataStore {
 	protected void innerWrite(byte[] data, long from, long to) {
 		while(to> capacity())
 			addBlock();
-		long strt= readFromAddress(startAddressPointer);
+		long strt= getStartAddress();
 		store.write(data,from+strt,to+strt);
-		writeToAddress(endMarkPointer,(int)Math.max(to, readFromAddress(endMarkPointer)));
+		setEndMarker((int)Math.max(to, size()));
 		jump(to);
 	}
 
@@ -181,16 +193,16 @@ public class Section extends DataStore {
 	public void shiftBack(long amount) {
 		long oldStart = getStartAddress();
 		shiftNextSection(-amount);
-		writeToAddress(startAddressPointer,getStartAddress()-amount);
-		writeToAddress(endAddressPointer,getEndAddress()-amount);
+		setStartAddress(getStartAddress()-amount);
+		setEndAddress(getEndAddress()-amount);
 		store.jump(oldStart);
 		store.shiftAll(-amount);
 	}
 	public void shiftForward(long amount) {
 		long oldStart = getStartAddress();
 		shiftNextSection(amount);
-		writeToAddress(startAddressPointer,getStartAddress()+amount);
-		writeToAddress(endAddressPointer,getEndAddress()+amount);
+		setStartAddress(getStartAddress()+amount);
+		setEndAddress(getEndAddress()+amount);
 		store.jump(oldStart);
 		store.shiftAll(amount);
 	}
@@ -199,15 +211,16 @@ public class Section extends DataStore {
 		long blcSz = getBlockSize();
 		store.jump(origEnd);
 		store.shiftAll(blcSz);
-		writeToAddress(endAddressPointer,origEnd+blcSz);
+		setEndAddress(origEnd+blcSz);
 		shiftNextSection(blcSz);
 	}
 	private void shiftNextSection(long blcSz){
 		if(followUp != null){
-			followUp.writeToAddress(followUp.endAddressPointer, followUp.getEndAddress()+blcSz);
+			followUp.setEndAddress(followUp.getEndAddress()+blcSz);
 			if(shiftFlag == SHIFT_START_AND_END){
-				followUp.writeToAddress(followUp.startAddressPointer, followUp.getStartAddress()+blcSz);
+				followUp.setStartAddress(followUp.getStartAddress()+blcSz);
 			}
+			followUp.refreshCaches();
 			followUp.shiftNextSection(blcSz);
 		}
 	}
@@ -220,17 +233,17 @@ public class Section extends DataStore {
 		if(from > size())
 			throw new IllegalArgumentException("You cannot cut outside the data size (cut-point:"+from+", actual size:"+size());
 		long ret = capacity()-from;
-		writeToAddress(endMarkPointer, (int) from);
+		setEndMarker(from);
 		jump(from);
 		return  ret;
 	}
 
 	public long capacity() {
-		return readFromAddress(endAddressPointer)- readFromAddress(startAddressPointer);
+		return getEndAddress()- getStartAddress();
 	}
-
-	public void setEndAddress(long oldIndexEnd) {
-		writeToAddress(endAddressPointer,oldIndexEnd);
+	public void setEndAddress(long endAddress) {
+		writeToAddress(endAddressPointer,endAddress);
+		this.endAddress = endAddress;
 	}
 
 	/**
@@ -254,16 +267,25 @@ public class Section extends DataStore {
 		long origEnd = getEndAddress();
 		store.jump(origEnd);
 		store.shiftAll(mvSize);
-		writeToAddress(endAddressPointer,origEnd+mvSize);
+		setEndAddress(origEnd+mvSize);
 		shiftNextSection(mvSize);
 	}
 
-	public void setEndMarker(long oldSize) {
-		writeToAddress(endMarkPointer,oldSize);
+	public void setEndMarker(long endMarker) {
+		writeToAddress(endMarkPointer,endMarker);
+		this.endMark = endMarker;
 	}
 
 	public void setBlockSize(long i) {
 		writeToAddress(blockSizePointer,i);
+		this.blockSize = i;
+	}
+
+	public void refreshCaches() {
+		setEndAddressPointer(endAddressPointer);
+		setStartAddressPointer(startAddressPointer);
+		setEndMarkPointer(endMarkPointer);
+		setBlockSizePointer(blockSizePointer);
 	}
 
 	public static class SegmentationFault extends RuntimeException {
@@ -277,7 +299,7 @@ public class Section extends DataStore {
 		return printInfoAndData();
 	}
 	public String printInfoAndData(){
-		return "(startAddress:"+ readFromAddress(startAddressPointer)+", blockSize:"+ readFromAddress(blockSizePointer)+", usedSize:"+ readFromAddress(endMarkPointer)+", endAddress:"+ readFromAddress(endAddressPointer)+")"+super.toString();
+		return "(startAddress:"+ getStartAddress()+", blockSize:"+ getBlockSize()+", usedSize:"+ size()+", endAddress:"+getEndAddress()+")"+super.toString();
 
 	}
 
@@ -293,7 +315,7 @@ public class Section extends DataStore {
 		if (startAddressPointer != section.startAddressPointer) return false;
 		if (endAddressPointer != section.endAddressPointer) return false;
 		if (shiftFlag != section.shiftFlag) return false;
-		return followUp != null ? followUp.equals(section.followUp) : section.followUp == null;
+		return Objects.equals(followUp, section.followUp);
 	}
 
 	@Override
