@@ -64,19 +64,20 @@ publishing {
                 password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
             }
         }
-		
-		maven {
-            name = "Bintray"
-            url = uri("https://api.bintray.com/maven/nbrugger-tgm/java-libs/backed-collections/;publish=1")
-            credentials {
-                username = "nbrugger-tgm"
-				def pwdFile = new File("TOKENS")
-				if(pwdFile.exists())
-                    password = pwdFile.readLines().get(0)
-                else
-					password = System.getenv("BINTRAY_TOKEN")
-            }
-        }
+		if(!version.endsWith("SNAPSHOT")){
+			maven {
+				name = "Bintray"
+				url = uri("https://api.bintray.com/maven/nbrugger-tgm/java-libs/backed-collections/;publish=1")
+				credentials {
+					username = "nbrugger-tgm"
+					def pwdFile = new File("TOKENS")
+					if(pwdFile.exists())
+						password = pwdFile.readLines().get(0)
+					else
+						password = System.getenv("BINTRAY_TOKEN")
+				}
+			}
+		}
     }
 }
 
