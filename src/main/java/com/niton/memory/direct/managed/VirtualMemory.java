@@ -30,68 +30,78 @@ public class VirtualMemory {
 		this.bits = bits;
 		mainDos = new DataOutputStream(data.new DataStoreOutputStream());
 		mainDis = new DataInputStream(data.new DataStoreInputStream());
+	}
+	private class IndexSection extends Section {
+		public IndexSection(int configAddress, DataStore store, BitSystem system) {
+			super(configAddress, store, system);
+		}
+
+		@Override
+		public String toString() {
+			StringBuilder builder = new StringBuilder();
+			builder.append("Index: (size:"+size()+", end:"+getEndAddress()+"\n");
+			DataInputStream dis = new DataInputStream(this.openReadStream());
+			long old = this.getMarker();
+			this.jump(0);
+			long sz = size()/getSectionHeaderSize();
+			for (int i = 0; i < sz; i++) {
+				try {
+					switch (bits){
+
+						case x8:
+							builder.append("[blck:"+dis.readByte()+", size:"+dis.readByte()+", end:"+dis.readByte()+"]\n");
+							break;
+						case x16:
+							builder.append("[blck:"+dis.readShort()+", size:"+dis.readShort()+", end:"+dis.readShort()+"]\n");
+							break;
+						case x32:
+							builder.append("[blck:"+dis.readInt()+", size:"+dis.readInt()+", end:"+dis.readInt()+"]\n");
+							break;
+						case x64:
+							builder.append("[blck:"+dis.readLong()+", size:"+dis.readLong()+", end:"+dis.readLong()+"]\n");
+							break;
+					}
+
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			return builder.toString();
+		}
+	}
+	public void initIndex(int enlargementInterval){
+		sectionCache.clear();
 		data.jump(0);
 		writeNumber(mainDos,0);
 		writeNumber(mainDos, 0);
 		writeNumber(mainDos, 0);
 		writeNumber(mainDos, 0);
-		index = new Section(0, data,bits){
-			@Override
-			public String toString() {
-				StringBuilder builder = new StringBuilder();
-				builder.append("Index: (size:"+size()+", end:"+getEndAddress()+"\n");
-				DataInputStream dis = new DataInputStream(this.openReadStream());
-				long old = this.getMarker();
-				this.jump(0);
-				long sz = size()/getSectionHeaderSize();
-				for (int i = 0; i < sz; i++) {
-					try {
-						switch (bits){
-
-							case x8:
-								builder.append("[blck:"+dis.readByte()+", size:"+dis.readByte()+", end:"+dis.readByte()+"]\n");
-								break;
-							case x16:
-								builder.append("[blck:"+dis.readShort()+", size:"+dis.readShort()+", end:"+dis.readShort()+"]\n");
-								break;
-							case x32:
-								builder.append("[blck:"+dis.readInt()+", size:"+dis.readInt()+", end:"+dis.readInt()+"]\n");
-								break;
-							case x64:
-								builder.append("[blck:"+dis.readLong()+", size:"+dis.readLong()+", end:"+dis.readLong()+"]\n");
-								break;
-						}
-
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-				}
-				return builder.toString();
-			}
-		};
+		index = new IndexSection(0, data,bits);
+		index.refreshCaches();
 		indexDos = new DataOutputStream(index.new DataStoreOutputStream());
 		indexDis = new DataInputStream(index.new DataStoreInputStream());
-	}
 
-	public Section getIndex() {
-		return index;
-	}
-
-	public void initIndex(int enlargementInterval){
-		sectionCache.clear();
 		if(enlargementInterval < 1)
 			throw new IllegalArgumentException("Enlargement intervall must be > 0");
 		index.init(getSectionHeaderSize()*enlargementInterval,1,index.getHeaderSize());
 	}
-
-	public long sectionCount() {
-		return index.size()/getSectionHeaderSize();
-	}
 	public void readIndex(){
 		sectionCache.clear();
+		index = new IndexSection(0, data,bits);
+		index.refreshCaches();
+		indexDos = new DataOutputStream(index.new DataStoreOutputStream());
+		indexDis = new DataInputStream(index.new DataStoreInputStream());
 		for (int i = 0; i < sectionCount(); i++) {
 			readSection(i);
 		}
+	}
+	public Section getIndex() {
+		return index;
+	}
+
+
+	public long sectionCount() {
+		return index.size()/getSectionHeaderSize();
 	}
 	protected Section readSection(long i){
 		Section sect = new Section(this.data,
