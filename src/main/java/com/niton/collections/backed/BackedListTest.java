@@ -25,14 +25,14 @@ public class BackedListTest {
 		//testVirtualMemory();
 		fs.bufferSize = 1024*2;
 		VirtualMemory splitter = new VirtualMemory(fs);
-		//splitter.initIndex(100);
-		splitter.readIndex();
-		BackedMap<Rectangle, Rectangle> str = new BackedMap<>(splitter.createOrGetSection(2048, 3,0), true);
-		//str.clear();
-		//for (int i = 0; i < 10; i++) {
-		//	System.out.println(i);
-		//	str.put(new Rectangle((int)((i*Math.random())),((int)(i*Math.random())),((int)(i*Math.random())),((int)(i*Math.random()))),new Rectangle((int)(i*Math.random()),(int)(i*Math.random()),(int)(i*Math.random()),(int)(i*Math.random())));
-		//}
+		splitter.initIndex(100);
+		BackedMap<Rectangle, Rectangle> str = new BackedMap<>(splitter.createOrGetSection(2048, 3,0), false);
+		str.put(null, null);
+		str.clear();
+		for (int i = 0; i < 100; i++) {
+			System.out.println(i);
+			str.put(new Rectangle((int)((i*Math.random())),((int)(i*Math.random())),((int)(i*Math.random())),((int)(i*Math.random()))),new Rectangle((int)(i*Math.random()),(int)(i*Math.random()),(int)(i*Math.random()),(int)(i*Math.random())));
+		}
 		System.out.println(str);
 
 	}
