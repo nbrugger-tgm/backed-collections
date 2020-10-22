@@ -54,3 +54,22 @@ List<String> l = new BackedList(store,false);
     * Custom Serializers
 
 > `*` This means the collections data wont be damaged when your software chrashes. <b>!!!EXCEPT It fails during a write access.</b>
+
+## Attention
+
+Due to this type of collections are not intended to be created by Java there are a few things to keep in mind. All of them are very important as the collection classes dont behave like you expect them to. This said *all of my collection implementations are fully java spect compatible* and the behavior descibed bellow is not missbehaving but, unexpected as normaly this features do work.
+
+* **HashCode** : The backed Map relies on HashCodes. The problem is that some Classes change their HashCode when they are serialized and deserialized which leads to the Keys having null values.
+* **Reference Updating** : while you can do `list.get(0).setSomething(anything)` for normal collections, backed collections wont update the record as i cant capture it. you would need to `get()` an item, then `set` its property and than **replace** it with `set`
+
+## Roadmap
+
+- [ ] Full Javadoc
+- [ ] Linked Map implementation (to overcome hashCode problems at the cost of performance)
+- [ ] ! Performance optimisation
+  - [ ] Managed Storing
+  - [ ] Collection Caching
+- [ ] Set Implementation
+- [ ] Stack, Queue Implementation
+- [ ] Add Oberserver & Serilaizing Interface support
+- [ ] Custom Performance options
