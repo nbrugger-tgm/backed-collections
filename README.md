@@ -67,7 +67,7 @@ Due to this type of collections are not intended to be created by Java there are
 - [ ] Full Javadoc
 - [ ] Linked Map implementation (to overcome hashCode problems at the cost of performance)
 - [ ] ! Performance optimisation
-  - [ ] Managed Storing
+  - [x] Managed Storing
   - [ ] Collection Caching
 - [ ] Set Implementation
 - [ ] Stack, Queue Implementation
