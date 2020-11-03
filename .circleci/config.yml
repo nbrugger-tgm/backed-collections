@@ -48,10 +48,12 @@ jobs:
       - run:
           name: Rerun Codeclimate
           command: |
-                     - run:
+          
+      - run:
           name: Setup Code Climate test-reporter
           command: |
             ./cc-test-reporter before-build
+            
       # run tests!
       - run:
           name: Run testcases (Gradle)
