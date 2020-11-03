@@ -46,10 +46,6 @@ jobs:
           key: v1-dependencies-{{ checksum "build.gradle" }}
           
       - run:
-          name: Rerun Codeclimate
-          command: |
-          
-      - run:
           name: Setup Code Climate test-reporter
           command: |
             ./cc-test-reporter before-build
