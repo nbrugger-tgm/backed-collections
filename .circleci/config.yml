@@ -60,5 +60,5 @@ jobs:
           name: commit-code-coverage
           command: |
             export JACOCO_SOURCE_PATH=`pwd`/src/main/java/
-            ./cc-test-reporter format-coverage --input-type jacoco --exit-code $?
+            ./cc-test-reporter format-coverage --input-type jacoco
             ./cc-test-reporter upload-coverage
