@@ -44,6 +44,7 @@ jobs:
           paths:
             - ~/.gradle
           key: v1-dependencies-{{ checksum "build.gradle" }}
+          
       - run:
           name: Rerun Codeclimate
           command: |
@@ -56,6 +57,7 @@ jobs:
           name: Run testcases (Gradle)
           command: |
             gradle test
+            
       - run:
           name: commit-code-coverage
           command: |
