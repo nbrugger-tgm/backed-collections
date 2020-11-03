@@ -1,8 +1,29 @@
 # Backed Collections
-![Java JUnit Test with Gradle](https://github.com/nbrugger-tgm/backed-collections/workflows/Java%20JUnit%20Test%20with%20Gradle/badge.svg?branch=master)<br>
-[![nbrugger-tgm](https://circleci.com/gh/nbrugger-tgm/backed-collections.svg?style=shield)](https://circleci.com/gh/nbrugger-tgm/backed-collections)<br>
-![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/nbrugger-tgm/backed-collections?include_prereleases)<br>
+
+![GitHub issues by-label](https://img.shields.io/github/issues/nbrugger-tgm/backed-collections/bug)![GitHub closed issues by-label](https://img.shields.io/github/issues-closed/nbrugger-tgm/backed-collections/bug)
+
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/nbrugger-tgm/backed-collections?label=latest%20stable)
+![GitHub commits since latest release (by date)](https://img.shields.io/github/commits-since/nbrugger-tgm/backed-collections/latest)
+![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/nbrugger-tgm/backed-collections?include_prereleases&label=latest)
+
+![GitHub last commit](https://img.shields.io/github/last-commit/nbrugger-tgm/backed-collections)![GitHub Workflow Status](https://img.shields.io/github/workflow/status/nbrugger-tgm/backed-collections/Java%20JUnit%20Test%20with%20Gradle)<br>
+
 This lib provides (currently) a backed list and map implementation.
+
+### Development
+
+![Lines of code](https://img.shields.io/tokei/lines/github/nbrugger-tgm/backed-collections)<br>
+
+![Code Climate issues](https://img.shields.io/codeclimate/issues/nbrugger-tgm/backed-collections?label=Code%20Quality%20issues)
+[![Maintainability](https://img.shields.io/codeclimate/maintainability/nbrugger-tgm/backed-collections.svg)](https://codeclimate.com/github/nbrugger-tgm/backed-collections)
+[![Maintainability](https://img.shields.io/codeclimate/maintainability-percentage/nbrugger-tgm/backed-collections.svg)](https://codeclimate.com/github/nbrugger-tgm/backed-collections)
+
+### Usage
+
+### ![Java 1.9](https://img.shields.io/badge/java-1.9-blue)
+
+### ![Maven metadata URL](https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Fniton.jfrog.io%2Fartifactory%2Fjava-libs%2Fcom%2Fniton%2Fbacked-collections%2Fmaven-metadata.xml)
+
 ### Example
 Creating a map backed by a file
 ```java
