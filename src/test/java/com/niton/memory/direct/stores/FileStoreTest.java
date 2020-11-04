@@ -1,5 +1,6 @@
 package com.niton.memory.direct.stores;
 
+import com.niton.StorageException;
 import com.niton.memory.direct.DataStore;
 
 import java.io.File;
@@ -13,10 +14,9 @@ public class FileStoreTest extends DataStoreTest {
 			if(!f.exists())
 				f.createNewFile();
 			System.out.println("Testfile: "+f.getAbsolutePath());
-			FileStore fs= new FileStore(f);
-			return fs;
+				return new FileStore(f);
 		} catch (IOException e) {
-			throw new MemoryException(e);
+			throw new StorageException(e);
 		}
 	}
 }

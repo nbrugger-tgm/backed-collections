@@ -1,6 +1,7 @@
 package com.niton.memory.direct.stores;
 
 import com.niton.memory.direct.DataStore;
+import com.niton.memory.direct.NegativeIndexException;
 import com.niton.memory.direct.managed.*;
 
 /**
