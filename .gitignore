@@ -186,3 +186,5 @@ gradle-app.setting
 
 # End of https://www.toptal.com/developers/gitignore/api/java-web,gradle,intellij,eclipse
 coverage/codeclimate.json
+
+.idea/

@@ -98,21 +98,28 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 			dataSegment.get(getKeyIndex(key)).write(value,valueSerializer);
 			return old;
 		}else{
-			long keyHash = key == null ? 0 : key.hashCode();
-			int[] poolInfo = getHashPoolInfo(keyHash);
-			if(poolInfo.length == 0){
-				createHashPool(keyHash,1);
-				poolInfo = getHashPoolInfo(keyHash);
-			}else{
-				alterHashPoolSize(poolInfo[0],1);
-				poolInfo[2] += 1;
-			}
-			Section keyStore = keySegment.insertSection(poolInfo[2],KEY_SIZE_ALLOC / 4, 4);
-			Section valueStore = dataSegment.insertSection(poolInfo[2],VALUE_SIZE_ALLOC / 4, 4);
-			keyStore.write(key,keySerializer);
-			valueStore.write(value,valueSerializer);
+			addEntry(key, value);
 			return null;
 		}
+	}
+
+	private void addEntry(K key, V value) {
+		long keyHash = key == null ? 0 : key.hashCode();
+		int[] poolInfo = getHashPoolInfo(keyHash);
+
+		//test hash-pool existence
+		if(poolInfo.length == 0){
+			createHashPool(keyHash,1);
+			poolInfo = getHashPoolInfo(keyHash);
+		}else{
+			alterHashPoolSize(poolInfo[0],1);
+			poolInfo[2] += 1;
+		}
+
+		Section keyStore = keySegment.insertSection(poolInfo[2],KEY_SIZE_ALLOC / 4, 4);
+		Section valueStore = dataSegment.insertSection(poolInfo[2],VALUE_SIZE_ALLOC / 4, 4);
+		keyStore.write(key,keySerializer);
+		valueStore.write(value,valueSerializer);
 	}
 
 	private void alterHashPoolSize(int address, int enlargement) {

@@ -315,6 +315,7 @@ public class Section extends DataStore {
 		if (startAddressPointer != section.startAddressPointer) return false;
 		if (endAddressPointer != section.endAddressPointer) return false;
 		if (shiftFlag != section.shiftFlag) return false;
+
 		return Objects.equals(followUp, section.followUp);
 	}
 
