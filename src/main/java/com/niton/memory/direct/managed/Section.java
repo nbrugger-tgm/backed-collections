@@ -201,15 +201,29 @@ public class Section extends DataStore {
 		shiftNextSection(blcSz);
 	}
 	private void shiftNextSection(long blcSz){
-		if(followUp != null){
-			followUp.setEndAddress(followUp.getEndAddress()+blcSz);
-			if(shiftFlag == SHIFT_START_AND_END){
-				followUp.setStartAddress(followUp.getStartAddress()+blcSz);
-			}
-			followUp.refreshCaches();
-			followUp.shiftNextSection(blcSz);
+		NextShifter shifter = new NextShifter();
+		while (shifter != null){
+			shifter = shifter.shiftNextSection(blcSz);
 		}
 	}
+
+
+
+	private class NextShifter {
+		public NextShifter shiftNextSection(long blcSz){
+			if(followUp != null){
+				followUp.setEndAddress(followUp.getEndAddress()+blcSz);
+				if(shiftFlag == SHIFT_START_AND_END){
+					followUp.setStartAddress(followUp.getStartAddress()+blcSz);
+				}
+				followUp.refreshCaches();
+				return followUp.new NextShifter();
+			}
+			return null;
+		}
+	}
+
+
 	public void enableRefShifting(Section sect) {
 		this.followUp = sect;
 	}

@@ -28,7 +28,7 @@ public class BackedListTest {
 
 	@Test
 	public void testOverflow(){
-		BackedList<String> lst = new BackedList<>(new ArrayStore(1024),false);
+		BackedList<String> lst = new BackedList<>(new ArrayStore(1024*1024),false);
 		assertThrows(FixedDataStore.MemoryOverflowException.class,()->{
 			for (int i = 0; i < 10000; i++) {
 				lst.add("Some weird text "+i);
