@@ -40,16 +40,21 @@ public class Section extends DataStore {
 	private transient long startAddress,endAddress,endMark,blockSize;
 	//blockSize,usedSize,startAddress,endAddress
 	public Section(int configAddress, DataStore store,BitSystem system) {
-		this(store,configAddress,configAddress+=system.getBase(),configAddress+=system.getBase(),configAddress+system.getBase(),system);
+		this(store,
+				configAddress,
+				configAddress+system.getBase(),
+				configAddress+(system.getBase()*2),
+				configAddress+(system.getBase()*3),
+				system);
 	}
 	public Section(int configAddress, DataStore store) {
-		this(configAddress,store,BitSystem.x32);
+		this(configAddress,store,BitSystem.X32);
 	}
 	public long resolveAddress(long innerAddress){
 		return innerAddress+getStartAddress();
 	}
 	public Section(DataStore store, long blockSizePointer, long endMarkPointer, long startAddressPointer, long endAddressPointer) {
-		this(store,blockSizePointer,endMarkPointer,startAddressPointer,endAddressPointer,BitSystem.x32);
+		this(store,blockSizePointer,endMarkPointer,startAddressPointer,endAddressPointer,BitSystem.X32);
 	}
 	public Section(DataStore store, long blockSizePointer, long endMarkPointer, long startAddressPointer, long endAddressPointer, BitSystem system) {
 		this.bit = system;
@@ -109,11 +114,12 @@ public class Section extends DataStore {
 		setEndMarker(0);
 		setBlockSize(blockSize);
 		setEndAddress(startAddress+(blockSize*initialBLocks));
+		jump(0);
 	}
 
 	private void setStartAddress(long startAddress) {
 		this.startAddress = startAddress;
-		writeToAddress(startAddressPointer, startAddress);
+		bit.write(startAddressPointer, startAddress,store,dos);
 	}
 
 	public long getBlockSize(){
@@ -130,14 +136,16 @@ public class Section extends DataStore {
 		store.jump(address);
 		try {
 			switch (bit){
-				case x8:
+				case X8:
 					return dis.readByte();
-				case x16:
+				case X16:
 					return dis.readShort();
-				case x32:
+				case X32:
 					return dis.readInt();
-				case x64:
+				case X64:
 					return dis.readLong();
+				default:
+					throw new IllegalStateException("Unexpected value: " + bit);
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -164,28 +172,6 @@ public class Section extends DataStore {
 		jump(to);
 	}
 
-	private void writeToAddress(long address, long i) {
-		store.jump(address);
-		try {
-			switch (bit){
-				case x8:
-					dos.writeByte((int) i);
-					break;
-				case x16:
-					dos.writeShort((int) i);
-					break;
-				case x32:
-					dos.writeInt((int) i);
-					break;
-				case x64:
-					dos.writeLong(i);
-					break;
-			}
-
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
 
 	/**
 	 * Shifts the section itself towards index 0
@@ -242,7 +228,7 @@ public class Section extends DataStore {
 		return getEndAddress()- getStartAddress();
 	}
 	public void setEndAddress(long endAddress) {
-		writeToAddress(endAddressPointer,endAddress);
+		bit.write(endAddressPointer, endAddress,store,dos);
 		this.endAddress = endAddress;
 	}
 
@@ -272,12 +258,12 @@ public class Section extends DataStore {
 	}
 
 	public void setEndMarker(long endMarker) {
-		writeToAddress(endMarkPointer,endMarker);
+		bit.write(endMarkPointer, endMarker,store,dos);
 		this.endMark = endMarker;
 	}
 
 	public void setBlockSize(long i) {
-		writeToAddress(blockSizePointer,i);
+		bit.write(blockSizePointer, i,store,dos);
 		this.blockSize = i;
 	}
 
@@ -315,6 +301,7 @@ public class Section extends DataStore {
 		if (startAddressPointer != section.startAddressPointer) return false;
 		if (endAddressPointer != section.endAddressPointer) return false;
 		if (shiftFlag != section.shiftFlag) return false;
+
 		return Objects.equals(followUp, section.followUp);
 	}
 

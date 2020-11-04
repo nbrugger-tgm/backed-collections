@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
+import com.niton.StorageException;
 import com.niton.memory.direct.DataStore;
 
 public class FileStore extends DataStore {
@@ -35,7 +36,7 @@ public class FileStore extends DataStore {
 			jump(file.getFilePointer());
 			return res;
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 	}
 
@@ -57,7 +58,7 @@ public class FileStore extends DataStore {
 			jump(from);
 			return (sz-from);
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 	}
 }

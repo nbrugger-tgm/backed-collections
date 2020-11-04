@@ -4,20 +4,14 @@ import com.google.common.collect.testing.*;
 import com.google.common.collect.testing.features.CollectionFeature;
 import com.google.common.collect.testing.features.CollectionSize;
 import com.google.common.collect.testing.features.ListFeature;
-import com.google.common.collect.testing.features.MapFeature;
 import com.niton.collections.backed.BackedList;
 import com.niton.collections.backed.BackedMap;
 import com.niton.collections.backed.Serializer;
-import com.niton.collections.backed.SimpleBackedList;
 import com.niton.memory.direct.stores.ArrayStore;
 import junit.framework.Test;
 import junit.framework.TestSuite;
-import org.w3c.dom.css.Rect;
 
-import java.awt.*;
 import java.util.AbstractMap;
-import java.util.AbstractMap.SimpleEntry;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -28,15 +22,15 @@ import static com.google.common.collect.testing.features.MapFeature.ALLOWS_NULL_
 import static com.google.common.collect.testing.features.MapFeature.GENERAL_PURPOSE;
 import static com.google.common.collect.testing.features.MapFeature.SUPPORTS_REMOVE;
 
-public class CollectionTests {
+
+public class CollectionTest {
 	private final ArrayStore memory = new ArrayStore(10*1024*1024);
+
+
 	public static Test suite() {
-		return new CollectionTests().allTests();
+		return new CollectionTest().allTests();
 	}
 
-
-
-	@org.junit.Test
 	public junit.framework.Test allTests() {
 		try {
 		TestSuite suite =
@@ -106,7 +100,6 @@ public class CollectionTests {
 						SUPPORTS_ITERATOR_REMOVE
 				).createTestSuite();
 	}
-
 	public Test testBackedList() throws NoSuchMethodException {
 		return ListTestSuiteBuilder
 				.using(new TestListGenerator<String>() {

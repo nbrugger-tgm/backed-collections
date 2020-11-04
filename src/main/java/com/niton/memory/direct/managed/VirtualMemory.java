@@ -7,8 +7,8 @@ import java.io.IOException;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.ArrayList;
-import java.util.BitSet;
 
+import com.niton.StorageException;
 import com.niton.memory.direct.DataStore;
 
 public class VirtualMemory {
@@ -23,7 +23,7 @@ public class VirtualMemory {
 	private final ArrayList<Section> sectionCache = new ArrayList<>();
 
 	public VirtualMemory(DataStore data) {
-		this(data,BitSystem.x32);
+		this(data,BitSystem.X32);
 	}
 	public VirtualMemory(DataStore data,BitSystem bits) {
 		this.data = data;
@@ -39,50 +39,76 @@ public class VirtualMemory {
 		@Override
 		public String toString() {
 			StringBuilder builder = new StringBuilder();
-			builder.append("Index: (size:"+size()+", end:"+getEndAddress()+"\n");
+			builder.append("Index: (size:").append(size()).append(", end:").append(getEndAddress()).append(")\n");
 			DataInputStream dis = new DataInputStream(this.openReadStream());
 			long old = this.getMarker();
 			this.jump(0);
 			long sz = size()/getSectionHeaderSize();
 			for (int i = 0; i < sz; i++) {
-				try {
-					switch (bits){
-
-						case x8:
-							builder.append("[blck:"+dis.readByte()+", size:"+dis.readByte()+", end:"+dis.readByte()+"]\n");
-							break;
-						case x16:
-							builder.append("[blck:"+dis.readShort()+", size:"+dis.readShort()+", end:"+dis.readShort()+"]\n");
-							break;
-						case x32:
-							builder.append("[blck:"+dis.readInt()+", size:"+dis.readInt()+", end:"+dis.readInt()+"]\n");
-							break;
-						case x64:
-							builder.append("[blck:"+dis.readLong()+", size:"+dis.readLong()+", end:"+dis.readLong()+"]\n");
-							break;
-					}
-
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				printIndexEntry(builder, dis);
 			}
+			this.jump(old);
 			return builder.toString();
 		}
 	}
+
+	private void printIndexEntry(StringBuilder builder, DataInputStream dis){
+		try {
+			long blk,sz,end;
+			switch (bits){
+				case X8:
+					blk = dis.readByte();
+					sz= dis.readByte();
+					end = dis.readByte();
+					break;
+				case X16:
+					blk = dis.readShort();
+					sz= dis.readShort();
+					end = dis.readShort();
+					break;
+				case X32:
+					blk = dis.readInt();
+					sz= dis.readInt();
+					end = dis.readInt();
+					break;
+				case X64:
+					blk = dis.readLong();
+					sz= dis.readLong();
+					end = dis.readLong();
+					break;
+				default:
+					throw new IllegalStateException("Unexpected value: " + bits);
+			}
+			builder
+				.append("[blck:")
+				.append(blk)
+				.append(", size:")
+				.append(sz)
+				.append(", end:")
+				.append(end)
+				.append("]\n");
+		}catch (Exception e){
+			throw new StorageException(e);
+		}
+	}
+
 	public void initIndex(int enlargementInterval){
+		if(enlargementInterval < 1)
+			throw new IllegalArgumentException("Enlargement intervall must be > 0");
+
 		sectionCache.clear();
 		data.jump(0);
-		writeNumber(mainDos,0);
-		writeNumber(mainDos, 0);
-		writeNumber(mainDos, 0);
-		writeNumber(mainDos, 0);
+
+		bits.write(data.getMarker(),0,data,mainDos);
+		bits.write(data.getMarker(),0,data,mainDos);
+		bits.write(data.getMarker(),0,data,mainDos);
+		bits.write(data.getMarker(),0,data,mainDos);
+
 		index = new IndexSection(0, data,bits);
 		index.refreshCaches();
 		indexDos = new DataOutputStream(index.new DataStoreOutputStream());
 		indexDis = new DataInputStream(index.new DataStoreInputStream());
 
-		if(enlargementInterval < 1)
-			throw new IllegalArgumentException("Enlargement intervall must be > 0");
 		index.init(getSectionHeaderSize()*enlargementInterval,1,index.getHeaderSize());
 	}
 	public void readIndex(){
@@ -127,33 +153,13 @@ public class VirtualMemory {
 		Section sect = readSection(priorSize);
 		index.jump(priorSize*getSectionHeaderSize());
 
-		writeNumber(indexDos,blockSize);
-		writeNumber(indexDos,0);     //currentSize
-		writeNumber(indexDos,sect.getStartAddress()+blockSize*initialBlocks); //end
+		bits.write(index.getMarker(),blockSize,index,indexDos);
+		bits.write(index.getMarker(),0,index,indexDos);
+		bits.write(index.getMarker(),sect.getStartAddress()+blockSize*initialBlocks,index,indexDos);
 		sect.refreshCaches();
 		return sect;
 	}
 
-	private void writeNumber(DataOutputStream indexDos, long blockSize) {
-		try {
-			switch (bits) {
-				case x8:
-					indexDos.writeByte((byte) blockSize);
-					break;
-				case x16:
-					indexDos.writeShort((short) blockSize);
-					break;
-				case x32:
-					indexDos.writeInt((int) blockSize);
-					break;
-				case x64:
-						indexDos.writeLong(blockSize);
-					break;
-			}
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-	}
 
 	public Section get(long i){
 		if(i<0)
@@ -163,7 +169,7 @@ public class VirtualMemory {
 
 	@Override
 	public String toString() {
-		final StringBuffer sb = new StringBuffer("VirtualMemory{\n");
+		final StringBuilder sb = new StringBuilder("VirtualMemory{\n");
 		long s = sectionCount();
 		for (long i = 0; i < s; i++) {
 			Section sect = get(i);
@@ -249,24 +255,26 @@ public class VirtualMemory {
 		return get(i);
 	}
 	public String printIndex(){
-		String s = "";
-		s+=index+"\n";
-		long sections = sectionCount();
-		index.jump(0);
-		for (int i = 0; i < sections; i++) {
-			if(i==0)
-				s += "[   0   ]";
-			else{
-				index.skip(getSectionHeaderSize());
-				try {
-					s+=  "[   "+indexDis.readLong()+"   ]";
-				} catch (IOException e) {
-					throw new RuntimeException(e);
+		try {
+			StringBuilder s = new StringBuilder();
+			s.append(index).append("\n");
+
+			long sections = sectionCount();
+			index.jump(0);
+
+			for (int i = 0; i < sections; i++) {
+				if(i==0)
+					s.append("[   0   ]");
+				else{
+					index.skip(getSectionHeaderSize());
+					s.append("[   ").append(indexDis.readLong()).append("   ]");
 				}
 			}
-		}
 
-		return s;
+			return s.toString();
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
 	}
 
 	public BitSystem getBits() {

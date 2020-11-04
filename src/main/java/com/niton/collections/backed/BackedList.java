@@ -1,5 +1,7 @@
 package com.niton.collections.backed;
 
+import com.niton.StorageException;
+import com.niton.memory.direct.NegativeIndexException;
 import com.niton.memory.direct.managed.BitSystem;
 import com.niton.memory.direct.managed.Section;
 import com.niton.memory.direct.managed.VirtualMemory;
@@ -29,7 +31,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 
 	public BackedList(DataStore store, Serializer<T> serializer,boolean read) {
 		this.serializer = serializer;
-		this.memory = new VirtualMemory(store, BitSystem.x32);
+		this.memory = new VirtualMemory(store, BitSystem.X32);
 		if(read){
 			memory.readIndex();
 		}else{
@@ -42,11 +44,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 		int sz = size();
 		for (int i = 0; i < sz; i++) {
 			Object e = get(i);
-			if(o == e) {
-				remove(i);
-				return true;
-			}
-			if(o != null && e != null && e.hashCode() == o.hashCode() && o.equals(e)){
+			if(o == e || Objects.equals(e,o)){
 				remove(i);
 				return true;
 			}
@@ -57,7 +55,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 	@Override
 	public T get(int index) {
 		if(index < 0)
-			throw new IndexOutOfBoundsException("Negative indexes are not allowed");
+			throw new NegativeIndexException();
 		if(index>=size())
 			throw new IndexOutOfBoundsException(index);
 		Section s = memory.get(index);
@@ -65,7 +63,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 		try {
 			return serializer.read(s.openReadStream());
 		} catch (Exception e) {
-			throw new RuntimeException("Backing Exception",e);
+			throw new StorageException(e);
 		}
 	}
 
@@ -73,9 +71,10 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 	public boolean contains(Object o) {
 		if(size() == 0)
 			return false;
+
 		for(T e : this)
-			if((e==null &&o==null) || (e != null && e.equals(o)))
-			return true;
+			if(Objects.equals(o,e))
+				return true;
 		return false;
 	}
 
@@ -83,12 +82,17 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 	public int indexOf(Object o) {
 		if(size() == 0)
 			return -1;
-		//TODO performance upgrade, serializing o and matchig the bytes agains the storage. Should yeeld good results in speed
+
+		//TODO performance upgrade, serializing o and matching the bytes against the storage.
+		// Should yield good results in speed. Because its only one serialisation and then only bytematching
+		// And not deserializing for every element
+
 		for (int i = 0; i < size(); i++) {
 			T e = get(i);
-			if((e==null && o ==null) || (e!=null&&o!=null&&e.equals(o)))
+			if(Objects.equals(o,e))
 				return i;
 		}
+
 		return -1;
 	}
 
@@ -99,7 +103,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 //		try {
 //			return metaReader.readInt();
 //		} catch (IOException e) {
-//			throw new RuntimeException(e);
+//			throw new MemoryException(e);
 //		}
 	}
 
@@ -141,7 +145,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 	@Override
 	public void add(int index, T element) {
 		if(index < 0)
-			throw new IndexOutOfBoundsException("Negative indizes are not allowed");
+			throw new NegativeIndexException();
 		if(index > size())
 			throw new IndexOutOfBoundsException(index);
 		Section sec;
@@ -155,14 +159,14 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 			sec.jump(0);
 			serializer.write(element, os);
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 	}
 
 	@Override
 	public T set(int index, T element) {
 		if(index < 0)
-			throw new IndexOutOfBoundsException("Negative indizes are not allowed");
+			throw new NegativeIndexException();
 		if(index >= size())
 			throw new IndexOutOfBoundsException(index);
 		Section sec = memory.get(index);
@@ -175,7 +179,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 			sec.jump(0);
 			serializer.write(element, os);
 		} catch (IOException | ClassNotFoundException e) {
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 		return elem;
 	}
@@ -262,7 +266,8 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 		boolean preved = false;
 		@Override
 		public T previous() {
-			if(size()<=elem-1 || elem -1 <0)
+			preved = false;
+			if(isStateLegal())
 				throw new NoSuchElementException();
 			removeAllowed = true;
 			setAllowed = true;
@@ -282,7 +287,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 
 		@Override
 		public void remove() {
-			if (size() <= elem - (preved?0:1) || elem - (preved?0:1) < 0)
+			if (isStateLegal())
 				throw new IllegalStateException();
 			if (!removeAllowed)
 				throw new IllegalStateException("remove() is only allowed afer next() or previous()");
@@ -292,9 +297,14 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 			preved = false;
 		}
 
+		private boolean isStateLegal() {
+			int i = preved?0:1;
+			return size() <= elem - (i) || elem - (i) < 0;
+		}
+
 		@Override
 		public void set(T t) {
-			if (size() <= elem - (preved?0:1) || elem - (preved?0:1) < 0)
+			if (isStateLegal())
 				throw new IllegalStateException();
 			if (!setAllowed)
 				throw new IllegalStateException("set() is only allowed afer next() or previous()");

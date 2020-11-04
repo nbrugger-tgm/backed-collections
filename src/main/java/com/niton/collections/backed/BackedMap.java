@@ -3,6 +3,7 @@ package com.niton.collections.backed;
 import java.io.*;
 import java.util.*;
 
+import com.niton.StorageException;
 import com.niton.memory.direct.DataStore;
 import com.niton.memory.direct.managed.*;
 
@@ -29,7 +30,7 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 	}
 
 	public BackedMap(DataStore mainMemory, Serializer<K> keySerializer, Serializer<V> valueSerializer, boolean read) {
-		this.mainMemory = new VirtualMemory(mainMemory,BitSystem.x32);
+		this.mainMemory = new VirtualMemory(mainMemory,BitSystem.X32);
 		this.keySerializer = keySerializer;
 		this.valueSerializer = valueSerializer;
 		if(read) {
@@ -83,7 +84,7 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 			}
 			return s;
 		}catch (IOException e){
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 	}
 
@@ -98,21 +99,28 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 			dataSegment.get(getKeyIndex(key)).write(value,valueSerializer);
 			return old;
 		}else{
-			long keyHash = key == null ? 0 : key.hashCode();
-			int[] poolInfo = getHashPoolInfo(keyHash);
-			if(poolInfo.length == 0){
-				createHashPool(keyHash,1);
-				poolInfo = getHashPoolInfo(keyHash);
-			}else{
-				alterHashPoolSize(poolInfo[0],1);
-				poolInfo[2] += 1;
-			}
-			Section keyStore = keySegment.insertSection(poolInfo[2],KEY_SIZE_ALLOC / 4, 4);
-			Section valueStore = dataSegment.insertSection(poolInfo[2],VALUE_SIZE_ALLOC / 4, 4);
-			keyStore.write(key,keySerializer);
-			valueStore.write(value,valueSerializer);
+			addEntry(key, value);
 			return null;
 		}
+	}
+
+	private void addEntry(K key, V value) {
+		long keyHash = key == null ? 0 : key.hashCode();
+		int[] poolInfo = getHashPoolInfo(keyHash);
+
+		//test hash-pool existence
+		if(poolInfo.length == 0){
+			createHashPool(keyHash,1);
+			poolInfo = getHashPoolInfo(keyHash);
+		}else{
+			alterHashPoolSize(poolInfo[0],1);
+			poolInfo[2] += 1;
+		}
+
+		Section keyStore = keySegment.insertSection(poolInfo[2],KEY_SIZE_ALLOC / 4, 4);
+		Section valueStore = dataSegment.insertSection(poolInfo[2],VALUE_SIZE_ALLOC / 4, 4);
+		keyStore.write(key,keySerializer);
+		valueStore.write(value,valueSerializer);
 	}
 
 	private void alterHashPoolSize(int address, int enlargement) {
@@ -124,7 +132,7 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 			keyHashes.jump(address+8);
 			dos.writeInt(old+enlargement);
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 	}
 
@@ -135,7 +143,7 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 			dos.writeLong(hash);
 			dos.writeInt(size);
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 	}
 
@@ -179,7 +187,7 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 				}
 			}
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 		return new int[0];
 	}
@@ -233,23 +241,19 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 			if(c == null)
 				throw new NullPointerException();
 			if(c.size() == 0){
+				//empty retain clears map
 				int old = BackedMap.this.size();
 				BackedMap.this.clear();
 				return old > BackedMap.this.size();
 			}
+
 			boolean result = false;
-			Iterator<T> iter = iterator();
-			outer: while(iter.hasNext()) {
-				T kvEntry = iter.next();
-				for (Object o : c) {
-					if(o == null) {
-						if (kvEntry == null)
-							continue outer;
-					} else if(o.equals(kvEntry)){
-						continue outer;
-					}
-				}
-				iter.remove();
+			Iterator<T> removeIterator = iterator();
+			while(removeIterator.hasNext()) {
+				T kvEntry = removeIterator.next();
+				if(c.contains(kvEntry))
+					continue;
+				removeIterator.remove();
 				result = true;
 			}
 			return result;

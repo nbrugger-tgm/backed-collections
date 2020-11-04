@@ -1,5 +1,6 @@
 package com.niton.memory.direct;
 
+import com.niton.StorageException;
 import com.niton.collections.backed.Serializer;
 
 import java.io.IOException;
@@ -16,7 +17,7 @@ public abstract class DataStore {
 	 * @return the number of actual used bytes. NOT THE MAXIMUM SIZE
 	 */
 	public abstract long size();
-	public static final int byteShift = Byte.MIN_VALUE;
+	//public static final int byteShift = Byte.MIN_VALUE;
 	public int read() {
 		return unsignedByte(innerRead(marker, marker +1))[0];
 	}
@@ -122,7 +123,7 @@ public abstract class DataStore {
 	/**
 	 * @param keySerializer
 	 * @param <K>
-	 * @throws RuntimeException when reading goes wrong
+	 * @throws StorageException when reading goes wrong
 	 * @return
 	 */
 	public <K> K read(Serializer<K> keySerializer) {
@@ -130,7 +131,7 @@ public abstract class DataStore {
 		try {
 			return keySerializer.read(openReadStream());
 		} catch (IOException | ClassNotFoundException e) {
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 	}
 
@@ -139,7 +140,7 @@ public abstract class DataStore {
 		try {
 			valueSerializer.write(value,openWritingStream());
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 	}
 
@@ -230,32 +231,57 @@ public abstract class DataStore {
 	 * @see #shift(long)
 	 */
 	public void shift(long offset,long lenght){
+		//shifting out of size makes no sense
 		if(getMarker()>=size())
 			return;
 		if(offset == 0)
 			return;
 		if(lenght == 0)
 			return;
+
 		boolean startAtEnd = offset>0;
 		long origin = getMarker();
-		if(startAtEnd) {
-			while (lenght > bufferSize) {
-				jump(origin+(lenght -= bufferSize));
-				shift(offset, bufferSize);
-			}
-		}else{
-			while (lenght > bufferSize){
-				shift(offset,bufferSize);
-				skip(offset+bufferSize);
-				lenght-=bufferSize;
+		lenght = performBufferShift(offset, lenght, startAtEnd, origin);
+		performShift(offset, lenght, origin);
+	}
+
+	/**
+	 * Shifts blocks of buffers
+	 * @param offset the ammount to shift the data by
+	 * @param length the number of bytes to shift. Should be bigger than bufferSize. If it is not this method skips
+	 * @param startAtEnd if true the shifting is done backwards, depends on the shifting direction
+	 * @param origin the position to start shifting the data from
+	 * @return the remaining bytes (allways smaller or equal to bufferSize)
+	 */
+	private long performBufferShift(long offset, long length, boolean startAtEnd, long origin) {
+		while (length > bufferSize) {
+			if(startAtEnd) {
+				length -= bufferSize;
+				jump(origin + length);
+				performShift(offset, bufferSize,getMarker());
+			}else {
+				performShift(offset, bufferSize,getMarker());
+				skip(offset);
+				length -= bufferSize;
 			}
 		}
+		return length;
+	}
+
+	/**
+	 * Performs the read/write operations of a shift
+	 * @param offset the ammout to shift the data by
+	 * @param lenght ammount of data to shift. should be smaller than {@link DataStore#bufferSize}
+	 * @param origin the position to shift from
+	 */
+	private void performShift(long offset, long lenght, long origin) {
 		jump(origin);
 		byte[] dataToShift = readNext(lenght);
-		jump(origin+offset);
+		jump(origin + offset);
 		write(dataToShift);
-		jump(origin+offset);
+		jump(origin + offset);
 	}
+
 
 	@Override
 	public String toString() {
@@ -281,8 +307,8 @@ public abstract class DataStore {
 	}
 
 	public Stream<Byte> stream(){
-		long start;
-		byte[] data = read(start = getMarker(),	size());
+		long start = getMarker();
+		byte[] data = read(start,	size());
 		jump(start);
 		Byte[] wrapped = new Byte[data.length];
 		for (int i = 0; i < data.length; i++) {

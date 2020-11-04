@@ -55,7 +55,7 @@ public class SectionTest extends DataStoreTest {
 	@Override
 	protected DataStore createDataStoreImpl() {
 		baseStorage = new ArrayStore(1024*8);
-		return new Section(0, baseStorage,BitSystem.x8);
+		return new Section(0, baseStorage,BitSystem.X8);
 	}
 
 	@Test
