@@ -169,7 +169,7 @@ public class VirtualMemory {
 
 	@Override
 	public String toString() {
-		final StringBuffer sb = new StringBuffer("VirtualMemory{\n");
+		final StringBuilder sb = new StringBuilder("VirtualMemory{\n");
 		long s = sectionCount();
 		for (long i = 0; i < s; i++) {
 			Section sect = get(i);

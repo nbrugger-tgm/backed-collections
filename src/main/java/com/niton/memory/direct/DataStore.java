@@ -256,7 +256,8 @@ public abstract class DataStore {
 	private long performBufferShift(long offset, long length, boolean startAtEnd, long origin) {
 		while (length > bufferSize) {
 			if(startAtEnd) {
-				jump(origin +(length -= bufferSize));
+				length -= bufferSize;
+				jump(origin + length);
 				performShift(offset, bufferSize,getMarker());
 			}else {
 				performShift(offset, bufferSize,getMarker());
@@ -306,8 +307,8 @@ public abstract class DataStore {
 	}
 
 	public Stream<Byte> stream(){
-		long start;
-		byte[] data = read(start = getMarker(),	size());
+		long start = getMarker();
+		byte[] data = read(start,	size());
 		jump(start);
 		Byte[] wrapped = new Byte[data.length];
 		for (int i = 0; i < data.length; i++) {

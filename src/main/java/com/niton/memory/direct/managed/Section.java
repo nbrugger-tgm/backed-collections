@@ -144,6 +144,8 @@ public class Section extends DataStore {
 					return dis.readInt();
 				case X64:
 					return dis.readLong();
+				default:
+					throw new IllegalStateException("Unexpected value: " + bit);
 			}
 		} catch (IOException e) {
 			e.printStackTrace();

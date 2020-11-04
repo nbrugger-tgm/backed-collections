@@ -145,7 +145,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 	@Override
 	public void add(int index, T element) {
 		if(index < 0)
-			throw new IndexOutOfBoundsException("Negative indizes are not allowed");
+			throw new NegativeIndexException();
 		if(index > size())
 			throw new IndexOutOfBoundsException(index);
 		Section sec;
@@ -166,7 +166,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 	@Override
 	public T set(int index, T element) {
 		if(index < 0)
-			throw new IndexOutOfBoundsException("Negative indizes are not allowed");
+			throw new NegativeIndexException();
 		if(index >= size())
 			throw new IndexOutOfBoundsException(index);
 		Section sec = memory.get(index);

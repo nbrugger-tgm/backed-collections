@@ -248,12 +248,12 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 			}
 
 			boolean result = false;
-			Iterator<T> iter = iterator();
-			while(iter.hasNext()) {
-				T kvEntry = iter.next();
+			Iterator<T> removeIterator = iterator();
+			while(removeIterator.hasNext()) {
+				T kvEntry = removeIterator.next();
 				if(c.contains(kvEntry))
 					continue;
-				iter.remove();
+				removeIterator.remove();
 				result = true;
 			}
 			return result;
