@@ -3,12 +3,6 @@ package com.niton.memory.direct.managed;
 import com.niton.memory.direct.stores.ArrayStore;
 import org.junit.jupiter.api.*;
 
-import java.lang.management.MemoryManagerMXBean;
-import java.security.SecureRandom;
-import java.util.Arrays;
-import java.util.Random;
-import java.util.stream.Collectors;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -32,7 +26,7 @@ class VirtualMemoryTest {
 		store.jump(0);
 		store.write(new byte[store.maxLength()]);
 		store.cut(0);
-		memory = new VirtualMemory(store,BitSystem.x8);
+		memory = new VirtualMemory(store,BitSystem.X8);
 		memory.initIndex(1);
 		assertEquals(memory.getBits().getBase()*4,memory.getIndex().getStartAddress(),"Index start address wrong");
 		assertEquals(3*memory.getBits().getBase(),memory.getIndex().getBlockSize(),"Index block size incorrect");

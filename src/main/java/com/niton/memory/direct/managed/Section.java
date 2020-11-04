@@ -40,16 +40,21 @@ public class Section extends DataStore {
 	private transient long startAddress,endAddress,endMark,blockSize;
 	//blockSize,usedSize,startAddress,endAddress
 	public Section(int configAddress, DataStore store,BitSystem system) {
-		this(store,configAddress,configAddress+=system.getBase(),configAddress+=system.getBase(),configAddress+system.getBase(),system);
+		this(store,
+				configAddress,
+				configAddress+system.getBase(),
+				configAddress+(system.getBase()*2),
+				configAddress+(system.getBase()*3),
+				system);
 	}
 	public Section(int configAddress, DataStore store) {
-		this(configAddress,store,BitSystem.x32);
+		this(configAddress,store,BitSystem.X32);
 	}
 	public long resolveAddress(long innerAddress){
 		return innerAddress+getStartAddress();
 	}
 	public Section(DataStore store, long blockSizePointer, long endMarkPointer, long startAddressPointer, long endAddressPointer) {
-		this(store,blockSizePointer,endMarkPointer,startAddressPointer,endAddressPointer,BitSystem.x32);
+		this(store,blockSizePointer,endMarkPointer,startAddressPointer,endAddressPointer,BitSystem.X32);
 	}
 	public Section(DataStore store, long blockSizePointer, long endMarkPointer, long startAddressPointer, long endAddressPointer, BitSystem system) {
 		this.bit = system;
@@ -131,13 +136,13 @@ public class Section extends DataStore {
 		store.jump(address);
 		try {
 			switch (bit){
-				case x8:
+				case X8:
 					return dis.readByte();
-				case x16:
+				case X16:
 					return dis.readShort();
-				case x32:
+				case X32:
 					return dis.readInt();
-				case x64:
+				case X64:
 					return dis.readLong();
 			}
 		} catch (IOException e) {

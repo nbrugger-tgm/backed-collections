@@ -1,5 +1,6 @@
 package com.niton.memory.direct;
 
+import com.niton.StorageException;
 import com.niton.collections.backed.Serializer;
 
 import java.io.IOException;
@@ -16,7 +17,7 @@ public abstract class DataStore {
 	 * @return the number of actual used bytes. NOT THE MAXIMUM SIZE
 	 */
 	public abstract long size();
-	public static final int byteShift = Byte.MIN_VALUE;
+	//public static final int byteShift = Byte.MIN_VALUE;
 	public int read() {
 		return unsignedByte(innerRead(marker, marker +1))[0];
 	}
@@ -122,7 +123,7 @@ public abstract class DataStore {
 	/**
 	 * @param keySerializer
 	 * @param <K>
-	 * @throws MemoryException when reading goes wrong
+	 * @throws StorageException when reading goes wrong
 	 * @return
 	 */
 	public <K> K read(Serializer<K> keySerializer) {
@@ -130,7 +131,7 @@ public abstract class DataStore {
 		try {
 			return keySerializer.read(openReadStream());
 		} catch (IOException | ClassNotFoundException e) {
-			throw new MemoryException(e);
+			throw new StorageException(e);
 		}
 	}
 
@@ -139,7 +140,7 @@ public abstract class DataStore {
 		try {
 			valueSerializer.write(value,openWritingStream());
 		} catch (IOException e) {
-			throw new MemoryException(e);
+			throw new StorageException(e);
 		}
 	}
 

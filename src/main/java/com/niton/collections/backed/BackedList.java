@@ -1,6 +1,7 @@
 package com.niton.collections.backed;
 
 import com.niton.StorageException;
+import com.niton.memory.direct.NegativeIndexException;
 import com.niton.memory.direct.managed.BitSystem;
 import com.niton.memory.direct.managed.Section;
 import com.niton.memory.direct.managed.VirtualMemory;
@@ -30,7 +31,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 
 	public BackedList(DataStore store, Serializer<T> serializer,boolean read) {
 		this.serializer = serializer;
-		this.memory = new VirtualMemory(store, BitSystem.x32);
+		this.memory = new VirtualMemory(store, BitSystem.X32);
 		if(read){
 			memory.readIndex();
 		}else{
@@ -54,7 +55,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 	@Override
 	public T get(int index) {
 		if(index < 0)
-			throw new IndexOutOfBoundsException("Negative indexes are not allowed");
+			throw new NegativeIndexException();
 		if(index>=size())
 			throw new IndexOutOfBoundsException(index);
 		Section s = memory.get(index);

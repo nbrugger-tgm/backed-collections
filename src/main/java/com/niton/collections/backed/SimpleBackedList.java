@@ -1,14 +1,12 @@
 package com.niton.collections.backed;
 
 import com.niton.memory.direct.DataStore;
+import com.niton.memory.direct.NegativeIndexException;
 import com.niton.memory.direct.managed.BitSystem;
 import com.niton.memory.direct.managed.Section;
 import com.niton.memory.direct.managed.VirtualMemory;
 
-import java.io.*;
 import java.util.*;
-import java.util.function.Predicate;
-import java.util.function.UnaryOperator;
 
 public class SimpleBackedList<T> extends AbstractList<T> implements RandomAccess{
 
@@ -27,7 +25,7 @@ public class SimpleBackedList<T> extends AbstractList<T> implements RandomAccess
 
 	public SimpleBackedList(DataStore store, Serializer<T> serializer, boolean read) {
 		this.serializer = serializer;
-		this.memory = new VirtualMemory(store, BitSystem.x32);
+		this.memory = new VirtualMemory(store, BitSystem.X32);
 		if(read){
 			memory.readIndex();
 		}else{
@@ -48,7 +46,7 @@ public class SimpleBackedList<T> extends AbstractList<T> implements RandomAccess
 	@Override
 	public void add(int index, T element) {
 		if(index < 0)
-			throw new IndexOutOfBoundsException("Negative indices are not allowed");
+			throw new NegativeIndexException();
 		Section sec;
 		if(index == size())
 			sec = memory.createOrGetSection(reservedObjectSpace,1,index);
@@ -62,7 +60,7 @@ public class SimpleBackedList<T> extends AbstractList<T> implements RandomAccess
 	@Override
 	public T get(int index) {
 		if(index < 0)
-			throw new IndexOutOfBoundsException("Negative indices are not allowed");
+			throw new NegativeIndexException();
 		Section sec = memory.get(index);
 		return sec.read(serializer);
 	}
@@ -70,7 +68,7 @@ public class SimpleBackedList<T> extends AbstractList<T> implements RandomAccess
 	@Override
 	public T set(int index, T element) {
 		if(index < 0)
-			throw new IndexOutOfBoundsException("Negative indices are not allowed");
+			throw new NegativeIndexException();
 		Section sec = memory.get(index);
 
 		T elem = sec.read(serializer);

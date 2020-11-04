@@ -30,7 +30,7 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 	}
 
 	public BackedMap(DataStore mainMemory, Serializer<K> keySerializer, Serializer<V> valueSerializer, boolean read) {
-		this.mainMemory = new VirtualMemory(mainMemory,BitSystem.x32);
+		this.mainMemory = new VirtualMemory(mainMemory,BitSystem.X32);
 		this.keySerializer = keySerializer;
 		this.valueSerializer = valueSerializer;
 		if(read) {

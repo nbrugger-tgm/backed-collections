@@ -23,7 +23,7 @@ public class VirtualMemory {
 	private final ArrayList<Section> sectionCache = new ArrayList<>();
 
 	public VirtualMemory(DataStore data) {
-		this(data,BitSystem.x32);
+		this(data,BitSystem.X32);
 	}
 	public VirtualMemory(DataStore data,BitSystem bits) {
 		this.data = data;
@@ -56,22 +56,22 @@ public class VirtualMemory {
 		try {
 			long blk,sz,end;
 			switch (bits){
-				case x8:
+				case X8:
 					blk = dis.readByte();
 					sz= dis.readByte();
 					end = dis.readByte();
 					break;
-				case x16:
+				case X16:
 					blk = dis.readShort();
 					sz= dis.readShort();
 					end = dis.readShort();
 					break;
-				case x32:
+				case X32:
 					blk = dis.readInt();
 					sz= dis.readInt();
 					end = dis.readInt();
 					break;
-				case x64:
+				case X64:
 					blk = dis.readLong();
 					sz= dis.readLong();
 					end = dis.readLong();
