@@ -99,10 +99,10 @@ public class VirtualMemory {
 		sectionCache.clear();
 		data.jump(0);
 
-		bits.write(index.getMarker(),0,index,indexDos);
-		bits.write(index.getMarker(),0,index,indexDos);
-		bits.write(index.getMarker(),0,index,indexDos);
-		bits.write(index.getMarker(),0,index,indexDos);
+		bits.write(data.getMarker(),0,data,mainDos);
+		bits.write(data.getMarker(),0,data,mainDos);
+		bits.write(data.getMarker(),0,data,mainDos);
+		bits.write(data.getMarker(),0,data,mainDos);
 
 		index = new IndexSection(0, data,bits);
 		index.refreshCaches();

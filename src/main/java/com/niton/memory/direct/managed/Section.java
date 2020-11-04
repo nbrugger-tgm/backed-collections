@@ -109,11 +109,12 @@ public class Section extends DataStore {
 		setEndMarker(0);
 		setBlockSize(blockSize);
 		setEndAddress(startAddress+(blockSize*initialBLocks));
+		jump(0);
 	}
 
 	private void setStartAddress(long startAddress) {
 		this.startAddress = startAddress;
-		bit.write(startAddressPointer, startAddress,this,dos);
+		bit.write(startAddressPointer, startAddress,store,dos);
 	}
 
 	public long getBlockSize(){
@@ -220,7 +221,7 @@ public class Section extends DataStore {
 		return getEndAddress()- getStartAddress();
 	}
 	public void setEndAddress(long endAddress) {
-		bit.write(endAddressPointer, endAddress,this,dos);
+		bit.write(endAddressPointer, endAddress,store,dos);
 		this.endAddress = endAddress;
 	}
 
@@ -250,12 +251,12 @@ public class Section extends DataStore {
 	}
 
 	public void setEndMarker(long endMarker) {
-		bit.write(endMarkPointer, endMarker,this,dos);
+		bit.write(endMarkPointer, endMarker,store,dos);
 		this.endMark = endMarker;
 	}
 
 	public void setBlockSize(long i) {
-		bit.write(blockSizePointer, i,this,dos);
+		bit.write(blockSizePointer, i,store,dos);
 		this.blockSize = i;
 	}
 
