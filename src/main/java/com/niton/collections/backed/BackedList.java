@@ -1,5 +1,6 @@
 package com.niton.collections.backed;
 
+import com.niton.StorageException;
 import com.niton.memory.direct.managed.BitSystem;
 import com.niton.memory.direct.managed.Section;
 import com.niton.memory.direct.managed.VirtualMemory;
@@ -61,7 +62,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 		try {
 			return serializer.read(s.openReadStream());
 		} catch (Exception e) {
-			throw new RuntimeException("Backing Exception",e);
+			throw new StorageException(e);
 		}
 	}
 
@@ -101,7 +102,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 //		try {
 //			return metaReader.readInt();
 //		} catch (IOException e) {
-//			throw new RuntimeException(e);
+//			throw new MemoryException(e);
 //		}
 	}
 
@@ -157,7 +158,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 			sec.jump(0);
 			serializer.write(element, os);
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 	}
 
@@ -177,7 +178,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 			sec.jump(0);
 			serializer.write(element, os);
 		} catch (IOException | ClassNotFoundException e) {
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 		return elem;
 	}

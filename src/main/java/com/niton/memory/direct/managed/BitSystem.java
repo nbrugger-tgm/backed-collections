@@ -41,7 +41,7 @@ public enum BitSystem {
 					break;
 			}
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			throw new MemoryException(e);
 		}
 	}
 	public void write(long address, long i, DataStore store) {

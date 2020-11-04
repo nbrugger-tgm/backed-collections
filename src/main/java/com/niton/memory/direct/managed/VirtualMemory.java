@@ -7,8 +7,8 @@ import java.io.IOException;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.ArrayList;
-import java.util.BitSet;
 
+import com.niton.StorageException;
 import com.niton.memory.direct.DataStore;
 
 public class VirtualMemory {
@@ -88,7 +88,7 @@ public class VirtualMemory {
 				.append(end)
 				.append("]\n");
 		}catch (Exception e){
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 	}
 
@@ -273,7 +273,7 @@ public class VirtualMemory {
 
 			return s.toString();
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 	}
 

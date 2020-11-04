@@ -122,7 +122,7 @@ public abstract class DataStore {
 	/**
 	 * @param keySerializer
 	 * @param <K>
-	 * @throws RuntimeException when reading goes wrong
+	 * @throws MemoryException when reading goes wrong
 	 * @return
 	 */
 	public <K> K read(Serializer<K> keySerializer) {
@@ -130,7 +130,7 @@ public abstract class DataStore {
 		try {
 			return keySerializer.read(openReadStream());
 		} catch (IOException | ClassNotFoundException e) {
-			throw new RuntimeException(e);
+			throw new MemoryException(e);
 		}
 	}
 
@@ -139,7 +139,7 @@ public abstract class DataStore {
 		try {
 			valueSerializer.write(value,openWritingStream());
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			throw new MemoryException(e);
 		}
 	}
 

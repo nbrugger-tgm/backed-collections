@@ -16,7 +16,7 @@ public class FileStoreTest extends DataStoreTest {
 			FileStore fs= new FileStore(f);
 			return fs;
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			throw new MemoryException(e);
 		}
 	}
 }

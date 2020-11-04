@@ -3,6 +3,7 @@ package com.niton.collections.backed;
 import java.io.*;
 import java.util.*;
 
+import com.niton.StorageException;
 import com.niton.memory.direct.DataStore;
 import com.niton.memory.direct.managed.*;
 
@@ -83,7 +84,7 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 			}
 			return s;
 		}catch (IOException e){
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 	}
 
@@ -131,7 +132,7 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 			keyHashes.jump(address+8);
 			dos.writeInt(old+enlargement);
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 	}
 
@@ -142,7 +143,7 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 			dos.writeLong(hash);
 			dos.writeInt(size);
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 	}
 
@@ -186,7 +187,7 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 				}
 			}
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 		return new int[0];
 	}
