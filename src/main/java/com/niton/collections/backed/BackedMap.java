@@ -233,22 +233,18 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 			if(c == null)
 				throw new NullPointerException();
 			if(c.size() == 0){
+				//empty retain clears map
 				int old = BackedMap.this.size();
 				BackedMap.this.clear();
 				return old > BackedMap.this.size();
 			}
+
 			boolean result = false;
 			Iterator<T> iter = iterator();
-			outer: while(iter.hasNext()) {
+			while(iter.hasNext()) {
 				T kvEntry = iter.next();
-				for (Object o : c) {
-					if(o == null) {
-						if (kvEntry == null)
-							continue outer;
-					} else if(o.equals(kvEntry)){
-						continue outer;
-					}
-				}
+				if(c.contains(kvEntry))
+					continue;
 				iter.remove();
 				result = true;
 			}

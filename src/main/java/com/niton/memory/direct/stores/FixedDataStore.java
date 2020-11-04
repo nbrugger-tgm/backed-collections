@@ -47,17 +47,6 @@ public abstract class FixedDataStore extends DataStore {
 	protected abstract void fixedInnerWrite(byte[] data, long from, long to);
 
 
-	@Override
-	public String toString() {
-		long originMarker = getMarker();
-		final StringBuffer sb = new StringBuffer(getClass().getSimpleName()+"->");
-			sb.append('[');
-			for (int i = 0; i < size(); ++i)
-				sb.append(i == 0 ? "" : ", ").append(i == originMarker?"> ":"").append(read(i));
-			sb.append(']');
-			jump(originMarker);
-		return sb.toString();
-	}
 	public static class MemoryOverflowException extends RuntimeException{
 		public MemoryOverflowException(long maxSize,long writePosition) {
 			super("You DataStore is out of Memory. DataStore:"+VirtualMemory.humanReadableByteCountSI(maxSize)+" Write address:"+VirtualMemory.humanReadableByteCountSI(writePosition));
