@@ -54,67 +54,61 @@ public class VirtualMemory {
 
 	private void printIndexEntry(StringBuilder builder, DataInputStream dis){
 		try {
+			long blk,sz,end;
 			switch (bits){
 				case x8:
-					builder
-							.append("[blck:")
-							.append(dis.readByte())
-							.append(", size:")
-							.append(dis.readByte())
-							.append(", end:")
-							.append(dis.readByte())
-							.append("]\n");
+					blk = dis.readByte();
+					sz= dis.readByte();
+					end = dis.readByte();
 					break;
 				case x16:
-					builder
-							.append("[blck:")
-							.append(dis.readShort())
-							.append(", size:")
-							.append(dis.readShort())
-							.append(", end:")
-							.append(dis.readShort())
-							.append("]\n");
+					blk = dis.readShort();
+					sz= dis.readShort();
+					end = dis.readShort();
 					break;
 				case x32:
-					builder
-							.append("[blck:")
-							.append(dis.readInt())
-							.append(", size:")
-							.append(dis.readInt())
-							.append(", end:")
-							.append(dis.readInt())
-							.append("]\n");
+					blk = dis.readInt();
+					sz= dis.readInt();
+					end = dis.readInt();
 					break;
 				case x64:
-					builder
-							.append("[blck:")
-							.append(dis.readLong())
-							.append(", size:")
-							.append(dis.readLong())
-							.append(", end:")
-							.append(dis.readLong())
-							.append("]\n");
+					blk = dis.readLong();
+					sz= dis.readLong();
+					end = dis.readLong();
 					break;
+				default:
+					throw new IllegalStateException("Unexpected value: " + bits);
 			}
+			builder
+				.append("[blck:")
+				.append(blk)
+				.append(", size:")
+				.append(sz)
+				.append(", end:")
+				.append(end)
+				.append("]\n");
 		}catch (Exception e){
 			throw new RuntimeException(e);
 		}
 	}
 
 	public void initIndex(int enlargementInterval){
+		if(enlargementInterval < 1)
+			throw new IllegalArgumentException("Enlargement intervall must be > 0");
+
 		sectionCache.clear();
 		data.jump(0);
-		writeNumber(mainDos,0);
-		writeNumber(mainDos, 0);
-		writeNumber(mainDos, 0);
-		writeNumber(mainDos, 0);
+
+		bits.write(index.getMarker(),0,index,indexDos);
+		bits.write(index.getMarker(),0,index,indexDos);
+		bits.write(index.getMarker(),0,index,indexDos);
+		bits.write(index.getMarker(),0,index,indexDos);
+
 		index = new IndexSection(0, data,bits);
 		index.refreshCaches();
 		indexDos = new DataOutputStream(index.new DataStoreOutputStream());
 		indexDis = new DataInputStream(index.new DataStoreInputStream());
 
-		if(enlargementInterval < 1)
-			throw new IllegalArgumentException("Enlargement intervall must be > 0");
 		index.init(getSectionHeaderSize()*enlargementInterval,1,index.getHeaderSize());
 	}
 	public void readIndex(){
@@ -159,33 +153,13 @@ public class VirtualMemory {
 		Section sect = readSection(priorSize);
 		index.jump(priorSize*getSectionHeaderSize());
 
-		writeNumber(indexDos,blockSize);
-		writeNumber(indexDos,0);     //currentSize
-		writeNumber(indexDos,sect.getStartAddress()+blockSize*initialBlocks); //end
+		bits.write(index.getMarker(),blockSize,index,indexDos);
+		bits.write(index.getMarker(),0,index,indexDos);
+		bits.write(index.getMarker(),sect.getStartAddress()+blockSize*initialBlocks,index,indexDos);
 		sect.refreshCaches();
 		return sect;
 	}
 
-	private void writeNumber(DataOutputStream indexDos, long blockSize) {
-		try {
-			switch (bits) {
-				case x8:
-					indexDos.writeByte((byte) blockSize);
-					break;
-				case x16:
-					indexDos.writeShort((short) blockSize);
-					break;
-				case x32:
-					indexDos.writeInt((int) blockSize);
-					break;
-				case x64:
-						indexDos.writeLong(blockSize);
-					break;
-			}
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-	}
 
 	public Section get(long i){
 		if(i<0)

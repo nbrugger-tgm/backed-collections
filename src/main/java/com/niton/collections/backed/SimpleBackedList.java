@@ -55,13 +55,8 @@ public class SimpleBackedList<T> extends AbstractList<T> implements RandomAccess
 		else {
 			sec = memory.insertSection(index,reservedObjectSpace,1);
 		}
-		try {
-			OutputStream os = sec.openWritingStream();
-			sec.jump(0);
-			serializer.write(element, os);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+
+		sec.write(element,serializer);
 	}
 
 	@Override
@@ -69,15 +64,7 @@ public class SimpleBackedList<T> extends AbstractList<T> implements RandomAccess
 		if(index < 0)
 			throw new IndexOutOfBoundsException("Negative indices are not allowed");
 		Section sec = memory.get(index);
-		InputStream is = sec.openReadStream();
-		T elem;
-		try {
-			sec.jump(0);
-			elem = serializer.read(is);
-		} catch (IOException | ClassNotFoundException e) {
-			throw new RuntimeException(e);
-		}
-		return elem;
+		return sec.read(serializer);
 	}
 
 	@Override
@@ -85,17 +72,9 @@ public class SimpleBackedList<T> extends AbstractList<T> implements RandomAccess
 		if(index < 0)
 			throw new IndexOutOfBoundsException("Negative indices are not allowed");
 		Section sec = memory.get(index);
-		sec.jump(0);
-		InputStream is = sec.openReadStream();
-		T elem;
-		OutputStream os = sec.openWritingStream();
-		try {
-			elem = serializer.read(is);
-			sec.jump(0);
-			serializer.write(element, os);
-		} catch (IOException | ClassNotFoundException e) {
-			throw new RuntimeException(e);
-		}
+
+		T elem = sec.read(serializer);
+		sec.write(element,serializer);
 		return elem;
 	}
 

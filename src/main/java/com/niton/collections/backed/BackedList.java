@@ -264,7 +264,8 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 		boolean preved = false;
 		@Override
 		public T previous() {
-			if(size()<=elem-1 || elem -1 <0)
+			preved = false;
+			if(isStateLegal())
 				throw new NoSuchElementException();
 			removeAllowed = true;
 			setAllowed = true;
@@ -284,7 +285,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 
 		@Override
 		public void remove() {
-			if (size() <= elem - (preved?0:1) || elem - (preved?0:1) < 0)
+			if (isStateLegal())
 				throw new IllegalStateException();
 			if (!removeAllowed)
 				throw new IllegalStateException("remove() is only allowed afer next() or previous()");
@@ -294,9 +295,14 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 			preved = false;
 		}
 
+		private boolean isStateLegal() {
+			int i = preved?0:1;
+			return size() <= elem - (i) || elem - (i) < 0;
+		}
+
 		@Override
 		public void set(T t) {
-			if (size() <= elem - (preved?0:1) || elem - (preved?0:1) < 0)
+			if (isStateLegal())
 				throw new IllegalStateException();
 			if (!setAllowed)
 				throw new IllegalStateException("set() is only allowed afer next() or previous()");

@@ -113,7 +113,7 @@ public class Section extends DataStore {
 
 	private void setStartAddress(long startAddress) {
 		this.startAddress = startAddress;
-		writeToAddress(startAddressPointer, startAddress);
+		bit.write(startAddressPointer, startAddress,this,dos);
 	}
 
 	public long getBlockSize(){
@@ -164,28 +164,6 @@ public class Section extends DataStore {
 		jump(to);
 	}
 
-	private void writeToAddress(long address, long i) {
-		store.jump(address);
-		try {
-			switch (bit){
-				case x8:
-					dos.writeByte((int) i);
-					break;
-				case x16:
-					dos.writeShort((int) i);
-					break;
-				case x32:
-					dos.writeInt((int) i);
-					break;
-				case x64:
-					dos.writeLong(i);
-					break;
-			}
-
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
 
 	/**
 	 * Shifts the section itself towards index 0
@@ -242,7 +220,7 @@ public class Section extends DataStore {
 		return getEndAddress()- getStartAddress();
 	}
 	public void setEndAddress(long endAddress) {
-		writeToAddress(endAddressPointer,endAddress);
+		bit.write(endAddressPointer, endAddress,this,dos);
 		this.endAddress = endAddress;
 	}
 
@@ -272,12 +250,12 @@ public class Section extends DataStore {
 	}
 
 	public void setEndMarker(long endMarker) {
-		writeToAddress(endMarkPointer,endMarker);
+		bit.write(endMarkPointer, endMarker,this,dos);
 		this.endMark = endMarker;
 	}
 
 	public void setBlockSize(long i) {
-		writeToAddress(blockSizePointer,i);
+		bit.write(blockSizePointer, i,this,dos);
 		this.blockSize = i;
 	}
 
