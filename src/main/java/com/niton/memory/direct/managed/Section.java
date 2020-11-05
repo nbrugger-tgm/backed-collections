@@ -213,11 +213,12 @@ public class Section extends DataStore {
 		public NextShifter shiftNextSection(long blcSz){
 			if(followUp != null){
 				followUp.setEndAddress(followUp.getEndAddress()+blcSz);
-				if(shiftFlag == SHIFT_START_AND_END){
+				if(shiftFlag == SHIFT_START_AND_END || followUp.followUp == null){
 					followUp.setStartAddress(followUp.getStartAddress()+blcSz);
 				}
+				NextShifter followShifter = followUp.new NextShifter();
 				followUp.refreshCaches();
-				return followUp.new NextShifter();
+				return followShifter;
 			}
 			return null;
 		}
