@@ -59,9 +59,8 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 		if(index>=size())
 			throw new IndexOutOfBoundsException(index);
 		Section s = memory.get(index);
-		s.jump(0);
 		try {
-			return serializer.read(s.openReadStream());
+			return s.read(serializer);
 		} catch (Exception e) {
 			throw new StorageException(e);
 		}
@@ -154,13 +153,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 		else {
 			sec = memory.insertSection(index,reservedObjectSpace,1);
 		}
-		try {
-			OutputStream os = sec.openWritingStream();
-			sec.jump(0);
-			serializer.write(element, os);
-		} catch (IOException e) {
-			throw new StorageException(e);
-		}
+		sec.write(element,serializer);
 	}
 
 	@Override

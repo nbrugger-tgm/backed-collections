@@ -50,6 +50,9 @@ public class VirtualMemory {
 			this.jump(old);
 			return builder.toString();
 		}
+		public String toSectionString(){
+			return super.toString();
+		}
 	}
 
 	private void printIndexEntry(StringBuilder builder, DataInputStream dis){
@@ -109,7 +112,8 @@ public class VirtualMemory {
 		indexDos = new DataOutputStream(index.new DataStoreOutputStream());
 		indexDis = new DataInputStream(index.new DataStoreInputStream());
 
-		index.init(getSectionHeaderSize()*enlargementInterval,1,index.getHeaderSize());
+		index.init(getSectionHeaderSize()*enlargementInterval,0,index.getHeaderSize());
+		index.setEndMarker(0);
 	}
 	public void readIndex(){
 		sectionCache.clear();

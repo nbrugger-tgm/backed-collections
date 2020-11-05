@@ -15,6 +15,7 @@ public abstract class DataStoreTest {
 
 	@Test
 	void cut() {
+		store.bufferSize = 1;
 		store.jump(0);
 		store.write(new byte[]{1,2,3,4,5,6,7,8,9,1,2,3,4});
 		store.cut(5);
@@ -34,6 +35,7 @@ public abstract class DataStoreTest {
 
 	@Test
 	void shiftAll() {
+		store.bufferSize = 1;
 		store.jump(0);
 		byte[] data = new byte[]{1,2,3,4,5,6,7,8,9,10};
 		store.write(data);
@@ -45,9 +47,14 @@ public abstract class DataStoreTest {
 		assertEquals(oldSize+3, store.size());
 		store.jump(3);
 		assertArrayEquals(data,store.readNext(10));
+		store.jump(3);
+		store.shiftAll(-3);
+		assertEquals(0,store.getMarker());
+		assertArrayEquals(data,store.readNext(10));
 	}
 	@Test
 	void shiftWrite(){
+		store.bufferSize = 1;
 		store.jump(0);
 		store.cut();
 		store.write(new byte[]{6,7,8,9,10});
@@ -66,6 +73,7 @@ public abstract class DataStoreTest {
 	}
 	@Test
 	void fullTest(){
+		store.bufferSize = 1;
 		store.jump(0);
 		assertEquals(0,store.getMarker(),"Jump not correctly executed");
 		store.write(new byte[]{1,2,3,4,5,6,7,8,9,10});
@@ -89,6 +97,7 @@ public abstract class DataStoreTest {
 
 	@Test
 	void singleWrite(){
+		store.bufferSize = 1;
 		store.jump(0);
 		store.write(1);
 		store.write(2);
@@ -101,6 +110,7 @@ public abstract class DataStoreTest {
 
 	@Test
 	void streaming() throws IOException {
+		store.bufferSize = 1;
 		store.jump(0);
 		store.cut();
 		OutputStream writer = store.openWritingStream();

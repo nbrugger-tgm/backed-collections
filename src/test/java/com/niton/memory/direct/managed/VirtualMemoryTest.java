@@ -129,7 +129,7 @@ class VirtualMemoryTest {
 
 	@Test
 	@Order(4)
-	void insertSection() {
+	void insertSection1() {
 		Section orig1 = memory.createSection(1,1);
 		Section orig2 = memory.createSection(1,1);
 		orig1.write(data);
@@ -156,6 +156,99 @@ class VirtualMemoryTest {
 		inserted.write(data);
 		assertEquals(data.length*2, inserted.size());
 		assertDoesNotThrow(()->memory.readIndex());
+	}
+
+	@Test
+	public void zeroPosDeletion(){
+		memory.setIndexIncrement(1);
+		memory.getIndex().bufferSize = 1;
+		Section s1 = memory.createSection(2,1);
+		s1.bufferSize = 1;
+		Section s2 = memory.createSection(2,1);
+		s2.bufferSize = 1;
+		Section s3 = memory.createSection(2,1);
+        s3.bufferSize = 1;
+		s1.jump(0);
+		s1.write(new byte[]{1, 2, 3});
+		s2.jump(0);
+		s2.write(new byte[]{4, 5, 6});
+		s3.jump(0);
+		s3.write(new byte[]{7, 8, 9});
+
+		memory.deleteSegment(0);
+
+		assertEquals(2,memory.sectionCount());
+		assertEquals(memory.getIndex().getEndAddress(),memory.get(0).getStartAddress());
+		assertEquals(memory.get(0).getEndAddress(),memory.get(1).getStartAddress());
+		assertNotEquals(memory.get(0).getStartAddress(),memory.get(0).getEndAddress());
+		assertNotEquals(memory.get(1).getStartAddress(),memory.get(1).getEndAddress());
+		assertArrayEquals(new byte[]{4, 5, 6},memory.get(0).read(0,3));
+		assertArrayEquals(new byte[]{7, 8, 9},memory.get(1).read(0,3));
+	}
+
+	@Test
+	public void structuralStrenght(){
+		memory.setIndexIncrement(1);
+		memory.getIndex().bufferSize = 1;
+		Section s1 = memory.createSection(2,1);
+		s1.bufferSize = 1;
+		Section s2 = memory.createSection(2,1);
+		s2.bufferSize = 1;
+		Section s3 = memory.createSection(2,1);
+		s3.bufferSize = 1;
+		memory.getIndex().bufferSize = 1;
+		s1.jump(0);
+		s1.write(new byte[]{1, 2, 3});
+		s2.jump(0);
+		s2.write(new byte[]{4, 5, 6});
+		s3.jump(0);
+		s3.write(new byte[]{7, 8, 9});
+
+		memory.initIndex(1);
+		assertEquals(0,memory.sectionCount());
+		assertDoesNotThrow(() -> {
+			Section si = memory.createSection(2,1);
+			si.bufferSize = 1;
+			Section si2 = memory.createSection(2,1);
+			si2.bufferSize = 1;
+			assertThrows(Exception.class, ()->{
+				Section si3 = memory.get(3);
+			});
+			Section si3 = memory.createSection(2,1);
+			si3.bufferSize = 1;
+			assertEquals(0,si2.size());
+			assertEquals(2,si2.capacity());
+			assertEquals(0,si.size());
+			assertEquals(2,si.capacity());
+			assertEquals(0,si3.size());
+			assertEquals(2,si3.capacity());
+			si.write(new byte[]{10,11,12});
+			assertArrayEquals(new byte[]{10,11,12},si.read(0,3));
+			assertEquals(0,si3.size());
+			assertEquals(2,si3.capacity());
+			assertEquals(0,si2.size());
+			assertEquals(2,si2.capacity());
+		});
+	}
+
+	@Test
+	void insertSections(){
+		memory.setIndexIncrement(1);
+		memory.getIndex().bufferSize = 1;
+		Section s1 = memory.createSection(2,1);
+		s1.bufferSize = 1;
+		Section s3 = memory.createSection(2,1);
+		s1.bufferSize = 1;
+		s1.write(new byte[]{1, 2, 3});
+		s3.write(new byte[]{7,8,9});
+		Section s2 = memory.insertSection(1,2,1);
+		s2.bufferSize = 1;
+		s2.write(new byte[]{4,5,6});
+
+		assertEquals(3,memory.sectionCount());
+		assertArrayEquals(new byte[]{1, 2, 3}, memory.get(0).read(0,3));
+		assertArrayEquals(new byte[]{4, 5, 6}, memory.get(1).read(0,3));
+		assertArrayEquals(new byte[]{7, 8, 9}, memory.get(2).read(0,3));
 	}
 
 }
