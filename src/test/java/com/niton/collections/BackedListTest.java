@@ -15,7 +15,9 @@ public class BackedListTest {
 
 	@BeforeEach
 	public void init() {
-		list = new BackedList<>(new ArrayStore(1024*1024),Serializer.STRING,false);
+		ArrayStore store = new ArrayStore(1024*1024);
+		store.bufferSize = 1;
+		list = new BackedList<>(store, Serializer.STRING, false);
 	}
 	@Test
 	public void general(){
@@ -45,6 +47,18 @@ public class BackedListTest {
 	public void testListInit(){
 		assertTrue(list.isEmpty());
 		assertEquals(list.size(), 0);
+	}
+
+	@Test
+	public void indexDeletion(){
+		list.add(0, "Karol");
+		list.add(1, "Vanessa");
+		list.add(2, "Amanda");
+
+		list.remove(0);
+		assertEquals(2,list.size());
+		assertEquals("Vanessa",list.get(0));
+		assertEquals("Amanda",list.get(1));
 	}
 
 	@Test

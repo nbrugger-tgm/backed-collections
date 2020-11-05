@@ -6,6 +6,7 @@ import com.niton.memory.direct.stores.FileStore;
 
 import java.io.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class PerformanceTest {
 
@@ -14,15 +15,55 @@ public class PerformanceTest {
 	}
 
 	public static void main(String[] args) throws FileNotFoundException {
-		new PerformanceTest().testSuite(NonRandomObject::new);
+		new PerformanceTest().testSuite(RandomObject::new);
 	}
 
 	private<T> void testSuite(Generator<T> g) throws FileNotFoundException {
 		File f1 = new File("cache.dat");
+		File f2 = new File("optimized.dat");
 		ArrayStore store = new ArrayStore(1024*1024*40);
 		FileStore fileStore = new FileStore(f1);
+		FileStore optimizedFileStore = new FileStore(f2);
 		Map<String,List<T>> implementations = new HashMap<>();
 
+		createImplementations(store, fileStore, optimizedFileStore,implementations);
+
+		Map<String,List<Measurement>> results = new HashMap<>();
+
+
+		for (Map.Entry<String, List<T>> implementation : implementations.entrySet()) {
+			results.put(implementation.getKey(),testListImplementation(256,implementation.getValue(),g));
+		}
+
+		printResult(results);
+	}
+
+
+	private void printResult(Map<String, List<Measurement>> results) {
+		PrettyPrinter printer = new PrettyPrinter(System.out);
+
+		String[][] table = new String[results.size()+1][];
+
+		List<Measurement> res1 = results.values().stream().findFirst().get();
+		String[] header = new String[1+res1.size()];
+		int i = 1;
+		for (String s : res1.stream().map(Measurement::getName).toArray(String[]::new)) {
+			header[i++] = s;
+		}
+
+		table[0] = header;
+		i = 1;
+		for (Map.Entry<String, List<Measurement>> result : results.entrySet()) {
+			String[] row = new String[result.getValue().size()+1];
+			row[0] = result.getKey();
+			final int[] j = {0};
+			result.getValue().forEach(e -> row[++j[0]] = Long.toString(e.getMs()));
+			table[i++] = row;
+		}
+		printer.print(table);
+	}
+
+	private <T> void createImplementations(ArrayStore store, FileStore fileStore,FileStore optimized, Map<String, List<T>> implementations) {
 		BackedList<T> allOptimizedArrayStoreList = new BackedList<>(store, false);
 		allOptimizedArrayStoreList.setIncrementSize(1024*10);
 		allOptimizedArrayStoreList.reservedObjectSpace = 200;
@@ -38,30 +79,14 @@ public class PerformanceTest {
 		implementations.put("Array Store backed list",new BackedList<>(store,false));
 
 		implementations.put("File backed List",new BackedList<>(fileStore,false));
+
+		BackedList<T> optimizedFileStore = new BackedList<>(optimized,false);
+		optimizedFileStore.reservedObjectSpace = 200;
+		optimizedFileStore.setIncrementSize(512);
+		implementations.put("Optimized File Store",optimizedFileStore);
+
 		implementations.put("ArrayList",new ArrayList<>());
 		implementations.put("LinkedList",new LinkedList<>());
-
-		Map<String,List<Measurement>> results = new HashMap<>();
-
-
-		for (Map.Entry<String, List<T>> implementation : implementations.entrySet()) {
-			results.put(implementation.getKey(),testListImplementation(256,implementation.getValue(),g));
-		}
-
-		PrettyPrinter printer = new PrettyPrinter(System.out);
-
-		String[][] table = new String[results.size()+1][];
-
-		table[0] = results.values().stream().findFirst().get().stream().map(Measurement::getName).toArray(String[]::new);
-		int i = 1;
-		for (Map.Entry<String, List<Measurement>> result : results.entrySet()) {
-			String[] row = new String[result.getValue().size()+1];
-			row[0] = result.getKey();
-			final int[] j = {0};
-			result.getValue().forEach(e -> row[++j[0]] = Long.toString(e.getMs()));
-			table[i++] = row;
-		}
-		printer.print(table);
 	}
 
 	private <T> List<Measurement> testListImplementation(int elements, List<T> implementation, Generator<T> gen){
@@ -124,7 +149,6 @@ public class PerformanceTest {
 		return measure("index looping",()->{
 			for (int i = 0; i < implementation.size(); i++) {
 				T t = implementation.get(i);
-				System.out.println(i+": "+t);
 			}
 		});
 	}
@@ -142,6 +166,7 @@ public class PerformanceTest {
 			}
 		});
 	}
+
 	private static class Measurement {
 		private final long ms;
 		private final String name;

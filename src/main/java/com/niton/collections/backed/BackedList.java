@@ -153,13 +153,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 		else {
 			sec = memory.insertSection(index,reservedObjectSpace,1);
 		}
-		try {
-			OutputStream os = sec.openWritingStream();
-			sec.jump(0);
-			serializer.write(element, os);
-		} catch (IOException e) {
-			throw new StorageException(e);
-		}
+		sec.write(element,serializer);
 	}
 
 	@Override

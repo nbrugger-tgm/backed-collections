@@ -50,6 +50,9 @@ public class VirtualMemory {
 			this.jump(old);
 			return builder.toString();
 		}
+		public String toSectionString(){
+			return super.toString();
+		}
 	}
 
 	private void printIndexEntry(StringBuilder builder, DataInputStream dis){
