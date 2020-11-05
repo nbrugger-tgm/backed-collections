@@ -242,7 +242,8 @@ public abstract class DataStore {
 		boolean startAtEnd = offset>0;
 		long origin = getMarker();
 		lenght = performBufferShift(offset, lenght, startAtEnd, origin);
-		performShift(offset, lenght, origin);
+		performShift(offset, lenght, getMarker());
+		jump(origin+offset);
 	}
 
 	/**
@@ -259,9 +260,10 @@ public abstract class DataStore {
 				length -= bufferSize;
 				jump(origin + length);
 				performShift(offset, bufferSize,getMarker());
+				skip(-(offset+length));
 			}else {
 				performShift(offset, bufferSize,getMarker());
-				skip(offset);
+				skip(-offset+bufferSize);
 				length -= bufferSize;
 			}
 		}

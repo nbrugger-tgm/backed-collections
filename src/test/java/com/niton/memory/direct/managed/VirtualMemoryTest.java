@@ -158,4 +158,32 @@ class VirtualMemoryTest {
 		assertDoesNotThrow(()->memory.readIndex());
 	}
 
+	@Test
+	public void zeroPosDeletion(){
+		memory.setIndexIncrement(1);
+		Section s1 = memory.createSection(2,1);
+		s1.bufferSize = 1;
+		Section s2 = memory.createSection(2,1);
+		s2.bufferSize = 1;
+		Section s3 = memory.createSection(2,1);
+        s3.bufferSize = 1;
+        memory.getIndex().bufferSize = 1;
+		s1.jump(0);
+		s1.write(new byte[]{1, 2, 3});
+		s2.jump(0);
+		s2.write(new byte[]{4, 5, 6});
+		s3.jump(0);
+		s3.write(new byte[]{7, 8, 9});
+
+		memory.deleteSegment(0);
+
+		assertEquals(2,memory.sectionCount());
+		assertEquals(memory.getIndex().getEndAddress(),memory.get(0).getStartAddress());
+		assertEquals(memory.get(0).getEndAddress(),memory.get(1).getStartAddress());
+		assertNotEquals(memory.get(0).getStartAddress(),memory.get(0).getEndAddress());
+		assertNotEquals(memory.get(1).getStartAddress(),memory.get(1).getEndAddress());
+		assertArrayEquals(new byte[]{4, 5, 6},memory.get(0).read(0,3));
+		assertArrayEquals(new byte[]{7, 8, 9},memory.get(1).read(0,3));
+	}
+
 }
