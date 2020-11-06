@@ -80,7 +80,7 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 			return sizeCache;
 		try {
 			int s = 0;
-			DataInputStream dis = new DataInputStream(keyHashes.openReadStream());
+			DataInputStream dis = new DataInputStream(new BufferedInputStream(keyHashes.openReadStream(),4));
 			keyHashes.jump(0);
 			int pools = getHashPoolCount();
 			for(int i = 0; i< pools; i++){
@@ -132,24 +132,27 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 	}
 
 	private void alterHashPoolSize(int address, int enlargement) {
-		DataInputStream dis = new DataInputStream(keyHashes.openReadStream());
-		DataOutputStream dos = new DataOutputStream(keyHashes.openWritingStream());
-		keyHashes.jump(address+8);
+		DataInputStream dis = new DataInputStream(new BufferedInputStream(keyHashes.openReadStream(),12));
+		DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(keyHashes.openWritingStream(),4));
+		keyHashes.jump(address);
 		try {
+			long hash = dis.readLong();
 			int old = dis.readInt();
 			keyHashes.jump(address+8);
 			dos.writeInt(old+enlargement);
+			dos.flush();
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
 	}
 
 	private void createHashPool(long hash,int size) {
-		DataOutputStream dos = new DataOutputStream(keyHashes.openWritingStream());
+		DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(keyHashes.openWritingStream(),12));
 		keyHashes.jumpToEnd();
 		try {
 			dos.writeLong(hash);
 			dos.writeInt(size);
+			dos.flush();
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
@@ -182,7 +185,7 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 	private int[] getHashPoolInfo(long hash) {
 		int from = 0;
 		int pools = getHashPoolCount();
-		DataInputStream poolReader = new DataInputStream(keyHashes.openReadStream());
+		DataInputStream poolReader = new DataInputStream(new BufferedInputStream(keyHashes.openReadStream(),4));
 		keyHashes.jump(0);
 		try {
 			for (int i = 0; i < pools; i++) {
