@@ -25,8 +25,9 @@ import static com.google.common.collect.testing.features.MapFeature.SUPPORTS_REM
 
 
 public class CollectionTest {
-	private final ArrayStore memory = new ArrayStore(50*1024*1024);
-
+	private final ArrayStore memoryOne = new ArrayStore(50*1024*1024);
+	private final ArrayStore memoryTwo = new ArrayStore(50*1024*1024);
+	private final ArrayStore memoryThree = new ArrayStore(50*1024*1024);
 
 	public static Test suite() {
 		return new CollectionTest().allTests();
@@ -36,8 +37,8 @@ public class CollectionTest {
 		try {
 		TestSuite suite =
 				new TestSuite("Backed Collections Tests");
-			suite.addTest(testBackedList(()->new BackedList<>(memory, Serializer.STRING,false)));
-			suite.addTest(testBackedList(()->new BackedPerformanceList<>(memory, false,Serializer.STRING)));
+			suite.addTest(testBackedList(()->new BackedList<>(memoryOne, Serializer.STRING,false)));
+			suite.addTest(testBackedList(()->new BackedPerformanceList<>(memoryTwo, false,Serializer.STRING)));
 			suite.addTest(testBackedMap());
 			return suite;
 		} catch (NoSuchMethodException e) {
@@ -62,7 +63,7 @@ public class CollectionTest {
 
 					@Override
 					public Map<String, String> create(Object... elements) {
-						BackedMap<String,String> create = new BackedMap<>(memory,Serializer.STRING,Serializer.STRING,false);
+						BackedMap<String,String> create = new BackedMap<>(memoryThree,Serializer.STRING,Serializer.STRING,false);
 						for (Object element : elements) {
 							Entry<String,String> e = (Map.Entry<String, String>) element;
 							create.put(e.getKey(),e.getValue());
