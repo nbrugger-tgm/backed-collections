@@ -70,8 +70,14 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 		return this;
 	}
 
+	public boolean useSizeCaching = true;
+	private boolean sizeCached = false;
+	private int sizeCache = 0;
+
 	@Override
 	public int size() {
+		if(useSizeCaching && sizeCached)
+			return sizeCache;
 		try {
 			int s = 0;
 			DataInputStream dis = new DataInputStream(keyHashes.openReadStream());
@@ -82,6 +88,8 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 				long poolSize = dis.readInt();
 				s += poolSize;
 			}
+			sizeCache = s;
+			sizeCached = true;
 			return s;
 		}catch (IOException e){
 			throw new StorageException(e);
@@ -216,6 +224,7 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 		dataSegment.initIndex(16);
 		keySegment.initIndex(16);
 		keyHashes.cut(0);
+		sizeCache = 0;
 	}
 
 	@Override
@@ -228,6 +237,7 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 			return null;
 		dataSegment.deleteSegment(poolIndex);
 		keySegment.deleteSegment(poolIndex);
+		sizeCache--;
 		alterHashPoolSize(poolInfo[0],-1);
 		return val;
 	}
