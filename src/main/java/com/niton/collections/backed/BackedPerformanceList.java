@@ -24,6 +24,7 @@ public class BackedPerformanceList<T> extends BaseCollection<T> implements List<
 		if(read) {
 			mainMemory.readIndex();
 		}else{
+			store.cut(0);
 			mainMemory.initIndex(2);
 		}
 		Section indexSection = read ? mainMemory.get(0) : mainMemory.createSection(1024*1024*5,4);

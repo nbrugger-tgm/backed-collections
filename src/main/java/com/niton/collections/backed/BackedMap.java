@@ -50,6 +50,7 @@ public class BackedMap<K,V> implements Map<K,V> {
 			keyHashes = this.mainMemory.get(0);
 		}else{
 			//Create Memory Structure
+			mainMemory.cut(0);
 			this.mainMemory.initIndex(3);
 			keyHashes = this.mainMemory.createSection(KEY_HASH_PAIR_SIZE, 512);
 			this.mainMemory.createSection(VALUE_SIZE_ALLOC+keyHashes.getHeaderSize(),512);//VALUE_SEGMENT

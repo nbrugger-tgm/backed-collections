@@ -36,6 +36,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 		if(read){
 			memory.readIndex();
 		}else{
+			store.cut(0);
 			memory.initIndex(increment);
 		}
 	}
