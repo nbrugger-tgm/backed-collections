@@ -99,11 +99,12 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 	private int getHashPoolCount() {
 		return (int) (keyHashes.size()/KEY_HASH_PAIR_SIZE);
 	}
-
+	private boolean replaced = false;
 	@Override
 	public V replace(K key, V value) {
 		int index = getKeyIndex(key);
 		if(index != -1){
+			replaced = true;
 			Section valueSection = dataSegment.get(index);
 			V old = valueSection.read(valueSerializer);
 			valueSection.write(value,valueSerializer);
@@ -114,8 +115,9 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 
 	@Override
 	public V put(K key, V value) {
+		replaced = false;
 		V v = replace(key,value);
-		if(v == null){
+		if(!replaced){
 			addEntry(key, value);
 			return null;
 		}
