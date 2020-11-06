@@ -146,6 +146,11 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 		sizeCache++;
 	}
 
+	@Override
+	public boolean containsKey(Object key) {
+		return getKeyIndex(key)!=-1;
+	}
+
 	private void alterHashPoolSize(int address, int enlargement) {
 		DataInputStream dis = new DataInputStream(new BufferedInputStream(keyHashes.openReadStream(),12));
 		DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(keyHashes.openWritingStream(),4));
@@ -180,13 +185,24 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 		//addr,start,end
 		if(info[1] == info[2])
 			return info[1];
+
+		byte[] serial;
+		try {
+			serial = keySerializer.serialize((K) key);
+		}catch (ClassCastException castException){
+			return -1;
+		}
+
 		for (int i = info[1]; i <= info[2]; i++) {
-			K curr = keySegment.get(i).read(keySerializer);
-			if(Objects.equals(curr, key))
+			if(Arrays.equals(keySegment.get(i).readFull(),serial))
 				return i;
 		}
 		return -1;
 	}
+
+	public boolean useCaching = false;
+
+	private final HashMap<Long,int[]> poolInfoCache = new HashMap<>();
 
 	/**
 	 * @param hash
@@ -230,6 +246,15 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 	@Override
 	public Set<K> keySet() {
 		return new IteratorSet<>(KeyIterator::new);
+	}
+
+	@Override
+	public Collection<V> values() {
+		Stack<V> stack = new Stack<>();
+		for (int i = 0; i < dataSegment.sectionCount(); i++) {
+			stack.push(dataSegment.get(i).read(valueSerializer));
+		}
+		return stack;
 	}
 
 	@Override
