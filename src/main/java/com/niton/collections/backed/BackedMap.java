@@ -101,16 +101,28 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 	}
 
 	@Override
-	public V put(K key, V value) {
-		if(containsKey(key)){
-			V old = get(key);
-			dataSegment.get(getKeyIndex(key)).write(value,valueSerializer);
+	public V replace(K key, V value) {
+		int index = getKeyIndex(key);
+		if(index != -1){
+			Section valueSection = dataSegment.get(index);
+			V old = valueSection.read(valueSerializer);
+			valueSection.write(value,valueSerializer);
 			return old;
-		}else{
+		}
+		return null;
+	}
+
+	@Override
+	public V put(K key, V value) {
+		V v = replace(key,value);
+		if(v == null){
 			addEntry(key, value);
 			return null;
 		}
+		return v;
 	}
+
+
 
 	private void addEntry(K key, V value) {
 		long keyHash = key == null ? 0 : key.hashCode();
