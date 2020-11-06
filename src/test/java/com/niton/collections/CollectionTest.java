@@ -6,6 +6,7 @@ import com.google.common.collect.testing.features.CollectionSize;
 import com.google.common.collect.testing.features.ListFeature;
 import com.niton.collections.backed.BackedList;
 import com.niton.collections.backed.BackedMap;
+import com.niton.collections.backed.BackedPerformanceList;
 import com.niton.collections.backed.Serializer;
 import com.niton.memory.direct.stores.ArrayStore;
 import junit.framework.Test;
@@ -24,7 +25,7 @@ import static com.google.common.collect.testing.features.MapFeature.SUPPORTS_REM
 
 
 public class CollectionTest {
-	private final ArrayStore memory = new ArrayStore(10*1024*1024);
+	private final ArrayStore memory = new ArrayStore(50*1024*1024);
 
 
 	public static Test suite() {
@@ -35,7 +36,8 @@ public class CollectionTest {
 		try {
 		TestSuite suite =
 				new TestSuite("Backed Collections Tests");
-			suite.addTest(testBackedList());
+			suite.addTest(testBackedList(()->new BackedList<>(memory, Serializer.STRING,false)));
+			suite.addTest(testBackedList(()->new BackedPerformanceList<>(memory, false,Serializer.STRING)));
 			suite.addTest(testBackedMap());
 			return suite;
 		} catch (NoSuchMethodException e) {
@@ -100,7 +102,7 @@ public class CollectionTest {
 						SUPPORTS_ITERATOR_REMOVE
 				).createTestSuite();
 	}
-	public Test testBackedList() throws NoSuchMethodException {
+	public Test testBackedList(ListProvider<String> creator) throws NoSuchMethodException {
 		return ListTestSuiteBuilder
 				.using(new TestListGenerator<String>() {
 					@Override
@@ -116,7 +118,7 @@ public class CollectionTest {
 
 					@Override
 					public List<String> create(Object... elements) {
-						BackedList<String> lst = new BackedList<>(memory, Serializer.STRING,false);
+						List<String> lst = creator.newList();
 						for(Object o : elements)
 							lst.add((String) o);
 						return lst;
@@ -133,7 +135,7 @@ public class CollectionTest {
 					}
 				})
 				.suppressing(BackedList.class.getMethod("iterator"),BackedList.class.getMethod("listIterator"),BackedList.class.getMethod("listIterator"))
-				.named("In Memory Backed List")
+				.named(creator.newList().getClass().getSimpleName())
 				.withFeatures(
 					CollectionSize.ANY,
 					CollectionFeature.ALLOWS_NULL_VALUES,
@@ -146,5 +148,9 @@ public class CollectionTest {
 					ListFeature.SUPPORTS_REMOVE_WITH_INDEX
 				)
 				.createTestSuite();
+	}
+
+	private interface ListProvider<T> {
+		public List<T> newList();
 	}
 }

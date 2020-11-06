@@ -1,6 +1,7 @@
 package com.niton.collections.backed;
 
 import com.niton.StorageException;
+import com.niton.collections.BaseCollection;
 import com.niton.collections.ProxyList;
 import com.niton.memory.direct.DataStore;
 import com.niton.memory.direct.managed.BitSystem;
@@ -10,8 +11,9 @@ import com.niton.memory.direct.managed.VirtualMemory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
-public class BackedPerformanceList<T> implements List<T> {
+public class BackedPerformanceList<T> extends BaseCollection<T> implements List<T> {
 	private final VirtualMemory mainMemory;
 	private final BackedMap<Integer,Integer> indexMap;
 	private final VirtualMemory dataMemory;
@@ -58,22 +60,6 @@ public class BackedPerformanceList<T> implements List<T> {
 		return listIterator();
 	}
 
-	@Override
-	public Object[] toArray() {
-		Object[] arr = new Object[size()];
-		for (int i = 0; i < arr.length; i++) {
-			arr[i] = get(i);
-		}
-		return arr;
-	}
-
-	@Override
-	public <T1> T1[] toArray(T1[] arr) {
-		for (int i = 0; i < arr.length; i++) {
-			arr[i] = (T1) get(i);
-		}
-		return arr;
-	}
 
 	@Override
 	public boolean add(T t) {
@@ -96,25 +82,25 @@ public class BackedPerformanceList<T> implements List<T> {
 	@Override
 	public boolean remove(Object o) {
 		int sz = size();
-		remove(indexOf(o));
+		try{
+			int i = indexOf((T)o);
+			if(i == -1)
+				return false;
+			remove(indexOf(o));
+		}catch (ClassCastException e){
+			return false;
+		}
 		return sz-size()>0;
 	}
 
-	@Override
-	public boolean containsAll(Collection<?> c) {
-		for (Object o : c)
-			if(!contains(o))
-				return false;
 
-		return false;
-	}
 
 	@Override
 	public boolean addAll(Collection<? extends T> c) {
 		for (T t : c) {
 			add(t);
 		}
-		return true;
+		return c.size()>0;
 	}
 
 	@Override
@@ -122,17 +108,9 @@ public class BackedPerformanceList<T> implements List<T> {
 		for (T t : c) {
 			add(index,t);
 		}
-		return true;
+		return c.size()>0;
 	}
 
-	@Override
-	public boolean removeAll(Collection<?> c) {
-		boolean accu = false;
-		for (Object t : c) {
-			accu |= remove(t);
-		}
-		return accu;
-	}
 
 	@Override
 	public boolean retainAll(Collection<?> c) {

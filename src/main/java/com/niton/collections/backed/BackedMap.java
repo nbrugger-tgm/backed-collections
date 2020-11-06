@@ -1,6 +1,7 @@
 package com.niton.collections.backed;
 
 import com.niton.StorageException;
+import com.niton.collections.BaseCollection;
 import com.niton.memory.direct.DataStore;
 import com.niton.memory.direct.managed.BitSystem;
 import com.niton.memory.direct.managed.Section;
@@ -80,6 +81,7 @@ public class BackedMap<K,V> implements Map<K,V> {
 		return obj != null && obj instanceof Map && ((Map<?, ?>) obj).size() == size() && entrySet().containsAll(((Map<?, ?>) obj).entrySet());
 	}
 
+
 	@Override
 	public int size() {
 		if(useSizeCaching && sizeCached)
@@ -145,7 +147,8 @@ public class BackedMap<K,V> implements Map<K,V> {
 			poolInfo = getHashPoolInfo(keyHash);
 		}else{
 			alterHashPoolSize(poolInfo[0],1);
-			poolInfo[2] += 1;
+			if(!useCaching)
+				poolInfo[2] += 1;
 		}
 
 		Section keyStore = keySegment.insertSection(poolInfo[2],KEY_SIZE_ALLOC / 4, 4);
@@ -180,6 +183,7 @@ public class BackedMap<K,V> implements Map<K,V> {
 			keyHashes.jump(address+8);
 			dos.writeInt(old+enlargement);
 			dos.flush();
+			poolInfoCache.get(hash)[2] += enlargement;
 		} catch (IOException e) {
 			throw new StorageException(e);
 		}
@@ -230,6 +234,8 @@ public class BackedMap<K,V> implements Map<K,V> {
 	 * </code>
 	 */
 	private int[] getHashPoolInfo(long hash) {
+		if(useCaching && poolInfoCache.containsKey(hash))
+			return poolInfoCache.get(hash);
 		int from = 0;
 		int pools = getHashPoolCount();
 		DataInputStream poolReader = new DataInputStream(new BufferedInputStream(keyHashes.openReadStream(),4));
@@ -239,7 +245,9 @@ public class BackedMap<K,V> implements Map<K,V> {
 				long poolHash = poolReader.readLong();
 				int size = poolReader.readInt();
 				if(poolHash == hash){
-					return new int[]{i*KEY_HASH_PAIR_SIZE,from,from+size-1};
+					int[] info = new int[]{i*KEY_HASH_PAIR_SIZE,from,from+size-1};
+					poolInfoCache.put(hash,Arrays.copyOf(info,info.length));
+					return info;
 				}else{
 					from += size;
 				}
@@ -276,6 +284,7 @@ public class BackedMap<K,V> implements Map<K,V> {
 		dataSegment.initIndex(16);
 		keySegment.initIndex(16);
 		keyHashes.cut(0);
+		poolInfoCache.clear();
 		sizeCache = 0;
 	}
 
@@ -515,15 +524,9 @@ public class BackedMap<K,V> implements Map<K,V> {
 		}
 	}
 
-	private class ValueCollection implements Collection<V> {
+	private class ValueCollection extends BaseCollection<V> {
 
-		@Override
-		public String toString() {
-			final StringBuffer sb = new StringBuffer("[");
-			sb.append(this.stream().map(Objects::toString).collect(Collectors.joining(", ")));
-			sb.append(']');
-			return sb.toString();
-		}
+
 		@Override
 		public int size() {
 			return BackedMap.this.size();
@@ -560,24 +563,7 @@ public class BackedMap<K,V> implements Map<K,V> {
 			return new ValueIterator();
 		}
 
-		@Override
-		public Object[] toArray() {
-			return toArray(new Object[BackedMap.this.size()]);
-		}
 
-		@Override
-		public <T> T[] toArray(T[] a) {
-			int sz = BackedMap.this.size();
-			if(size()<=a.length) {
-				Arrays.fill(a,null);
-			}else{
-				a = Arrays.copyOf(a,sz);
-			}
-			for (int i = 0; i < sz; i++) {
-				a[i] = (T) dataSegment.get(i).read(valueSerializer);
-			}
-			return a;
-		}
 
 		@Override
 		public boolean add(V v) {
@@ -595,22 +581,13 @@ public class BackedMap<K,V> implements Map<K,V> {
 			return true;
 		}
 
-		@Override
-		public boolean containsAll(Collection<?> c) {
-			return c.stream().map(this::contains).reduce(true,(a,b)->a && b);
-		}
+
 
 		@Override
 		public boolean addAll(Collection<? extends V> c) {
 			throw new UnsupportedOperationException();
 		}
 
-		@Override
-		public boolean removeAll(Collection<?> c) {
-			int prevSize = size();
-			c.forEach(this::remove);
-			return size()-prevSize != 0;
-		}
 
 		@Override
 		public boolean retainAll(Collection<?> c) {
@@ -630,7 +607,7 @@ public class BackedMap<K,V> implements Map<K,V> {
 			return changed;
 		}
 
-		private V get(int i){
+		protected V get(int i){
 			return dataSegment.get(i).read(valueSerializer);
 		}
 
