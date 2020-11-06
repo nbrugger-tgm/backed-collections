@@ -188,3 +188,5 @@ gradle-app.setting
 coverage/codeclimate.json
 
 .idea/
+
+*.dat

@@ -1,6 +1,8 @@
 package com.niton.collections.performance;
 
 import com.niton.collections.backed.BackedList;
+import com.niton.collections.backed.BackedPerformanceList;
+import com.niton.collections.backed.OOSSerializer;
 import com.niton.memory.direct.stores.ArrayStore;
 import com.niton.memory.direct.stores.FileStore;
 
@@ -14,7 +16,8 @@ public class PerformanceTest {
 		T next();
 	}
 
-	public static void main(String[] args) throws FileNotFoundException {
+	public static void main(String[] args) throws FileNotFoundException, InterruptedException {
+		Thread.sleep(15000);
 		new PerformanceTest().testSuite(RandomObject::new);
 	}
 
@@ -32,7 +35,9 @@ public class PerformanceTest {
 
 
 		for (Map.Entry<String, List<T>> implementation : implementations.entrySet()) {
-			results.put(implementation.getKey(),testListImplementation(256,implementation.getValue(),g));
+			long start = System.currentTimeMillis();
+			results.put(implementation.getKey(),testListImplementation(50,implementation.getValue(),g));
+			System.out.println(implementation.getKey()+" DONE : "+(System.currentTimeMillis()-start)+"ms");
 		}
 
 		printResult(results);
@@ -67,26 +72,27 @@ public class PerformanceTest {
 		BackedList<T> allOptimizedArrayStoreList = new BackedList<>(store, false);
 		allOptimizedArrayStoreList.setIncrementSize(1024*10);
 		allOptimizedArrayStoreList.reservedObjectSpace = 200;
-		implementations.put("All optimized ArrayStoreList", allOptimizedArrayStoreList);
+		//implementations.put("All optimized ArrayStoreList", allOptimizedArrayStoreList);
 
 		BackedList<T> optimizedIncrementArrayStoreList = new BackedList<>(store, false);
 		optimizedIncrementArrayStoreList.setIncrementSize(1024*10);
-		implementations.put("Increment Optimized ArrayStoreList",optimizedIncrementArrayStoreList);
+		//implementations.put("Increment Optimized ArrayStoreList",optimizedIncrementArrayStoreList);
 
 		BackedList<T> optimizedObjectReserveArrayStoreList = new BackedList<>(store, false);
 		optimizedObjectReserveArrayStoreList.reservedObjectSpace = 200;
-		implementations.put("ObjectSpace optimized ArrayStoreList",optimizedObjectReserveArrayStoreList);
-		implementations.put("Array Store backed list",new BackedList<>(store,false));
+		//implementations.put("ObjectSpace optimized ArrayStoreList",optimizedObjectReserveArrayStoreList);
+		//implementations.put("Array Store backed list",new BackedList<>(store,false));
 
-		implementations.put("File backed List",new BackedList<>(fileStore,false));
+		//implementations.put("File backed List",new BackedList<>(fileStore,false));
 
 		BackedList<T> optimizedFileStore = new BackedList<>(optimized,false);
 		optimizedFileStore.reservedObjectSpace = 200;
 		optimizedFileStore.setIncrementSize(512);
-		implementations.put("Optimized File Store",optimizedFileStore);
+		//implementations.put("Optimized File Store",optimizedFileStore);
 
-		implementations.put("ArrayList",new ArrayList<>());
-		implementations.put("LinkedList",new LinkedList<>());
+		//implementations.put("ArrayList",new ArrayList<>());
+		//implementations.put("LinkedList",new LinkedList<>());
+		implementations.put("Performance File list",new BackedPerformanceList<>(optimized,false,new OOSSerializer<>()));
 	}
 
 	private <T> List<Measurement> testListImplementation(int elements, List<T> implementation, Generator<T> gen){

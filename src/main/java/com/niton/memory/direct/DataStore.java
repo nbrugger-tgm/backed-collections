@@ -144,6 +144,15 @@ public abstract class DataStore {
 		}
 	}
 
+	/**
+	 * Marker is moved to the end<br>
+	 *     Attention! Only works with datastores smaller than integer.max_value
+	 * @return the whole data of this store as byte[]
+	 */
+	public byte[] readFull() {
+		return read(0,size());
+	}
+
 
 	public class DataStoreOutputStream extends OutputStream {
 		@Override
