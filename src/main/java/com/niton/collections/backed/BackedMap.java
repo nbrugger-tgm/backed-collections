@@ -129,6 +129,7 @@ public class BackedMap<K,V> extends AbstractMap<K,V> {
 		Section valueStore = dataSegment.insertSection(poolInfo[2],VALUE_SIZE_ALLOC / 4, 4);
 		keyStore.write(key,keySerializer);
 		valueStore.write(value,valueSerializer);
+		sizeCache++;
 	}
 
 	private void alterHashPoolSize(int address, int enlargement) {
