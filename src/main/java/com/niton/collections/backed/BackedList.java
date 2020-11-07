@@ -1,6 +1,8 @@
 package com.niton.collections.backed;
 
 import com.niton.StorageException;
+import com.niton.collections.DefaultIterator;
+import com.niton.collections.ProxyList;
 import com.niton.memory.direct.NegativeIndexException;
 import com.niton.memory.direct.managed.BitSystem;
 import com.niton.memory.direct.managed.Section;
@@ -21,7 +23,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 	 */
 	public long reservedObjectSpace = 100;
 	private final VirtualMemory memory;
-	private int increment = 10;
+	private int increment = 1024;
 
 	public BackedList(DataStore store,boolean read) {
 		this(store,new OOSSerializer<>(),read);
@@ -35,6 +37,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 		if(read){
 			memory.readIndex();
 		}else{
+			store.cut(0);
 			memory.initIndex(increment);
 		}
 	}
@@ -209,7 +212,8 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 	}
 	@Override
 	public Iterator<T> iterator() {
-		return new BackIter(0);
+		//return new BackIter(0);
+		return new DefaultIterator<>(this,0);
 	}
 
 	@Override
@@ -218,7 +222,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 			throw new IndexOutOfBoundsException(i);
 		if(i<0)
 			throw new IndexOutOfBoundsException("No negative indices");
-		return new BackIter(i);
+		return new DefaultIterator<>(this,i);
 	}
 
 	VirtualMemory getMemory() {
@@ -319,63 +323,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 	public List<T> subList(int fromIndex, int toIndex) {
 		if(fromIndex>toIndex)
 			throw new IllegalArgumentException("to cant be smaller than from");
-		return new ProxyList(fromIndex,toIndex);
+		return new ProxyList(this, fromIndex,toIndex);
 	}
 
-	private class ProxyList extends AbstractList<T> {
-
-		private int from,to;
-
-		private ProxyList(int from, int to) {
-			if(to>BackedList.this.size())
-				throw new IndexOutOfBoundsException(to);
-			if(from < 0)
-				throw new IndexOutOfBoundsException("Negative indices forbidden");
-			this.from = from;
-			this.to = to;
-		}
-
-		@Override
-		public T get(int index) {
-			if(index < 0)
-				throw new IndexOutOfBoundsException("Negative indizes are not allowed");
-			if(index>=size())
-				throw new IndexOutOfBoundsException(index);
-			return BackedList.this.get(from+index);
-		}
-
-		@Override
-		public int size() {
-			return to-from;
-		}
-
-		@Override
-		public T set(int index, T element) {
-			if(index >= size())
-				throw new IndexOutOfBoundsException(index);
-			if(index < 0)
-				throw new IndexOutOfBoundsException("Negative indizes are not allowed");
-			return BackedList.this.set(from+index,element);
-		}
-
-		@Override
-		public T remove(int index) {
-			if(index >= size())
-				throw new IndexOutOfBoundsException(index);
-			if(index < 0)
-				throw new IndexOutOfBoundsException("Negative indizes are not allowed");
-			to--;
-			return BackedList.this.remove(index+from);
-		}
-
-		@Override
-		public void add(int index, T element) {
-			if(index > size())
-				throw new IndexOutOfBoundsException(index);
-			if(index < 0)
-				throw new IndexOutOfBoundsException("Negative indizes are not allowed");
-			BackedList.this.add(from+index,element);
-			to++;
-		}
-	}
 }

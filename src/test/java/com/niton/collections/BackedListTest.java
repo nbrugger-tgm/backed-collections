@@ -7,6 +7,9 @@ import com.niton.memory.direct.stores.FixedDataStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Iterator;
+import java.util.ListIterator;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class BackedListTest {
@@ -118,5 +121,30 @@ public class BackedListTest {
 	@Test
 	public void testRemoveWithEmptyList(){
 		assertThrows(Exception.class,()->list.remove(0));
+	}
+
+	@Test
+	public void iteratorAdd(){
+		try {
+			Thread.sleep(15000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		ListIterator<String> s = list.listIterator();
+		for(int i = 0;i<20;i++)
+			s.add("Fuck my life");
+	}
+
+	@Test
+	public void testIteratorChaining(){
+		list.add("Ich");
+		list.add("Du");
+		list.add("Er");
+		ListIterator<String> iter = list.listIterator();
+		iter.next();
+		iter.remove();
+		iter.add("Es");
+		iter.add("Es");
+		System.out.println(list);
 	}
 }

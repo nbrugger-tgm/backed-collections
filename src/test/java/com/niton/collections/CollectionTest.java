@@ -6,6 +6,7 @@ import com.google.common.collect.testing.features.CollectionSize;
 import com.google.common.collect.testing.features.ListFeature;
 import com.niton.collections.backed.BackedList;
 import com.niton.collections.backed.BackedMap;
+import com.niton.collections.backed.BackedPerformanceList;
 import com.niton.collections.backed.Serializer;
 import com.niton.memory.direct.stores.ArrayStore;
 import junit.framework.Test;
@@ -24,8 +25,9 @@ import static com.google.common.collect.testing.features.MapFeature.SUPPORTS_REM
 
 
 public class CollectionTest {
-	private final ArrayStore memory = new ArrayStore(10*1024*1024);
-
+	private final ArrayStore memoryOne = new ArrayStore(50*1024*1024);
+	private final ArrayStore memoryTwo = new ArrayStore(50*1024*1024);
+	private final ArrayStore memoryThree = new ArrayStore(50*1024*1024);
 
 	public static Test suite() {
 		return new CollectionTest().allTests();
@@ -35,7 +37,8 @@ public class CollectionTest {
 		try {
 		TestSuite suite =
 				new TestSuite("Backed Collections Tests");
-			suite.addTest(testBackedList());
+			//suite.addTest(testBackedList(()->new BackedList<>(memoryOne, Serializer.STRING,false)));
+			suite.addTest(testBackedList(()->new BackedPerformanceList<>(memoryTwo, false,Serializer.STRING)));
 			suite.addTest(testBackedMap());
 			return suite;
 		} catch (NoSuchMethodException e) {
@@ -60,7 +63,7 @@ public class CollectionTest {
 
 					@Override
 					public Map<String, String> create(Object... elements) {
-						BackedMap<String,String> create = new BackedMap<>(memory,Serializer.STRING,Serializer.STRING,false);
+						BackedMap<String,String> create = new BackedMap<>(memoryThree,Serializer.STRING,Serializer.STRING,false);
 						for (Object element : elements) {
 							Entry<String,String> e = (Map.Entry<String, String>) element;
 							create.put(e.getKey(),e.getValue());
@@ -100,7 +103,7 @@ public class CollectionTest {
 						SUPPORTS_ITERATOR_REMOVE
 				).createTestSuite();
 	}
-	public Test testBackedList() throws NoSuchMethodException {
+	public Test testBackedList(ListProvider<String> creator) throws NoSuchMethodException {
 		return ListTestSuiteBuilder
 				.using(new TestListGenerator<String>() {
 					@Override
@@ -116,7 +119,7 @@ public class CollectionTest {
 
 					@Override
 					public List<String> create(Object... elements) {
-						BackedList<String> lst = new BackedList<>(memory, Serializer.STRING,false);
+						List<String> lst = creator.newList();
 						for(Object o : elements)
 							lst.add((String) o);
 						return lst;
@@ -133,7 +136,7 @@ public class CollectionTest {
 					}
 				})
 				.suppressing(BackedList.class.getMethod("iterator"),BackedList.class.getMethod("listIterator"),BackedList.class.getMethod("listIterator"))
-				.named("In Memory Backed List")
+				.named(creator.newList().getClass().getSimpleName())
 				.withFeatures(
 					CollectionSize.ANY,
 					CollectionFeature.ALLOWS_NULL_VALUES,
@@ -143,8 +146,13 @@ public class CollectionTest {
 					SUPPORTS_REMOVE,
 					ListFeature.SUPPORTS_SET,
 					ListFeature.SUPPORTS_ADD_WITH_INDEX,
-					ListFeature.SUPPORTS_REMOVE_WITH_INDEX
+					ListFeature.SUPPORTS_REMOVE_WITH_INDEX,
+						SUPPORTS_ITERATOR_REMOVE
 				)
 				.createTestSuite();
+	}
+
+	private interface ListProvider<T> {
+		public List<T> newList();
 	}
 }

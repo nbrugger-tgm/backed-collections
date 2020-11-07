@@ -1,5 +1,6 @@
 package com.niton.collections.backed;
 
+import com.niton.StorageException;
 import com.niton.memory.direct.DataStore;
 
 import java.io.*;
@@ -39,13 +40,16 @@ public abstract class Serializer<T> {
 	public static final Serializer<Integer> INT = new Serializer<>() {
 		@Override
 		public void write(Integer data, OutputStream store) throws IOException {
-			DataOutputStream dos = new DataOutputStream(store);
+			BufferedOutputStream bufOut = new BufferedOutputStream(store,4);
+			DataOutputStream dos = new DataOutputStream(bufOut);
 			dos.writeInt(data);
+			bufOut.flush();
 		}
 
 		@Override
-		public Integer read(InputStream store) throws IOException, ClassNotFoundException {
-			return new DataInputStream(store).readInt();
+		public Integer read(InputStream store) throws IOException {
+
+			return new DataInputStream(new BufferedInputStream(store,4)).readInt();
 		}
 	};
 	public static final Serializer<Byte> BYTE = new Serializer<>() {
@@ -61,4 +65,14 @@ public abstract class Serializer<T> {
 		}
 	};
 	public static final Serializer<Object> OBJECT = new OOSSerializer<>();
+
+	public byte[] serialize(T key)  {
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		try {
+			write(key,bos);
+		} catch (IOException e) {
+			throw new StorageException(e);
+		}
+		return bos.toByteArray();
+	}
 }
