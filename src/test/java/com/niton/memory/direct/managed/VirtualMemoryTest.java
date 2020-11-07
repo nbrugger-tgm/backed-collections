@@ -123,7 +123,7 @@ class VirtualMemoryTest {
 		memory.deleteSegment(0);
 		assertEquals(2, memory.get(0).read());
 		assertEquals(3, memory.get(1).read());
-		memory.deleteSegment(1);
+		memory.deleteSegment(0);
 		assertEquals(3, memory.get(0).read());
 	}
 
