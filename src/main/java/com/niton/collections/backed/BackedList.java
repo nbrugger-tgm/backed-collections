@@ -1,6 +1,7 @@
 package com.niton.collections.backed;
 
 import com.niton.StorageException;
+import com.niton.collections.DefaultIterator;
 import com.niton.collections.ProxyList;
 import com.niton.memory.direct.NegativeIndexException;
 import com.niton.memory.direct.managed.BitSystem;
@@ -22,7 +23,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 	 */
 	public long reservedObjectSpace = 100;
 	private final VirtualMemory memory;
-	private int increment = 10;
+	private int increment = 1024;
 
 	public BackedList(DataStore store,boolean read) {
 		this(store,new OOSSerializer<>(),read);
@@ -211,7 +212,8 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 	}
 	@Override
 	public Iterator<T> iterator() {
-		return new BackIter(0);
+		//return new BackIter(0);
+		return new DefaultIterator<>(this,0);
 	}
 
 	@Override
@@ -220,7 +222,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 			throw new IndexOutOfBoundsException(i);
 		if(i<0)
 			throw new IndexOutOfBoundsException("No negative indices");
-		return new BackIter(i);
+		return new DefaultIterator<>(this,i);
 	}
 
 	VirtualMemory getMemory() {

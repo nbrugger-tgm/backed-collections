@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import com.niton.StorageException;
 import com.niton.memory.direct.DataStore;
@@ -134,12 +135,7 @@ public class VirtualMemory {
 		return index.size()/getSectionHeaderSize();
 	}
 	protected Section readSection(long i){
-		Section sect = new Section(this.data,
-				index.resolveAddress(i*getSectionHeaderSize()),//block
-				index.resolveAddress(i*getSectionHeaderSize()+getBits().getBase()),//size
-				index.resolveAddress(i*getSectionHeaderSize()-getBits().getBase()),//start
-				index.resolveAddress(i*getSectionHeaderSize()+(getBits().getBase()*2))
-				,bits);//end
+		Section sect = getSectionHullAt(i);//end
 		if(i == 0){
 			sect.setStartAddressPointer(index.getEndAddressPointer());
 			index.enableRefShifting(sect);
@@ -149,9 +145,23 @@ public class VirtualMemory {
 			previous.enableRefShifting(sect);
 			previous.shiftFlag = Section.SHIFT_END;
 		}
+		if(printig){
+			System.out.println("Add To Section Cache " + sect);
+			Arrays.stream(Thread.currentThread().getStackTrace()).forEach(System.out::println);
+		}
 		sectionCache.add(sect);
 		return sect;
 	}
+	private static boolean printig = false;
+	private Section getSectionHullAt(long i) {
+		return new Section(this.data,
+				index.resolveAddress(i * getSectionHeaderSize()),//block
+				index.resolveAddress(i * getSectionHeaderSize() + getBits().getBase()),//size
+				index.resolveAddress(i * getSectionHeaderSize() - getBits().getBase()),//start
+				index.resolveAddress(i * getSectionHeaderSize() + (getBits().getBase() * 2))
+				, bits);
+	}
+
 	public Section createSection(long blockSize, long initialBlocks){
 		long priorSize = sectionCount();
 		Section sect = readSection(priorSize);
@@ -212,7 +222,7 @@ public class VirtualMemory {
 			this.index.cut(index*getSectionHeaderSize());
 		else
 			shiftSegmentsBackwards(index+1);
-		sectionCache.remove(index);
+		readIndex();
 	}
 
 	/**

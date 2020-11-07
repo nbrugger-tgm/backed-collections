@@ -6,9 +6,11 @@ import com.niton.collections.backed.OOSSerializer;
 import com.niton.memory.direct.stores.ArrayStore;
 import com.niton.memory.direct.stores.FileStore;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintStream;
+import java.io.Serializable;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class PerformanceTest {
 
@@ -72,7 +74,7 @@ public class PerformanceTest {
 		BackedList<T> allOptimizedArrayStoreList = new BackedList<>(store, false);
 		allOptimizedArrayStoreList.setIncrementSize(1024*10);
 		allOptimizedArrayStoreList.reservedObjectSpace = 200;
-		//implementations.put("All optimized ArrayStoreList", allOptimizedArrayStoreList);
+		implementations.put("All optimized ArrayStoreList", allOptimizedArrayStoreList);
 
 		BackedList<T> optimizedIncrementArrayStoreList = new BackedList<>(store, false);
 		optimizedIncrementArrayStoreList.setIncrementSize(1024*10);
@@ -88,7 +90,7 @@ public class PerformanceTest {
 		BackedList<T> optimizedFileStore = new BackedList<>(optimized,false);
 		optimizedFileStore.reservedObjectSpace = 200;
 		optimizedFileStore.setIncrementSize(512);
-		//implementations.put("Optimized File Store",optimizedFileStore);
+		implementations.put("Optimized File Store",optimizedFileStore);
 
 		//implementations.put("ArrayList",new ArrayList<>());
 		//implementations.put("LinkedList",new LinkedList<>());

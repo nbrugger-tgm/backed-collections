@@ -37,7 +37,7 @@ public class CollectionTest {
 		try {
 		TestSuite suite =
 				new TestSuite("Backed Collections Tests");
-			suite.addTest(testBackedList(()->new BackedList<>(memoryOne, Serializer.STRING,false)));
+			//suite.addTest(testBackedList(()->new BackedList<>(memoryOne, Serializer.STRING,false)));
 			suite.addTest(testBackedList(()->new BackedPerformanceList<>(memoryTwo, false,Serializer.STRING)));
 			suite.addTest(testBackedMap());
 			return suite;
@@ -146,7 +146,8 @@ public class CollectionTest {
 					SUPPORTS_REMOVE,
 					ListFeature.SUPPORTS_SET,
 					ListFeature.SUPPORTS_ADD_WITH_INDEX,
-					ListFeature.SUPPORTS_REMOVE_WITH_INDEX
+					ListFeature.SUPPORTS_REMOVE_WITH_INDEX,
+						SUPPORTS_ITERATOR_REMOVE
 				)
 				.createTestSuite();
 	}

@@ -5,7 +5,7 @@ import com.niton.collections.backed.BackedList;
 import java.util.AbstractList;
 import java.util.List;
 
-public class ProxyList<T> extends AbstractList<T> {
+public class ProxyList<T> extends BaseList<T> {
 
 	private final List<T> refList;
 	private int from, to;
@@ -20,6 +20,7 @@ public class ProxyList<T> extends AbstractList<T> {
 		this.to = to;
 	}
 
+
 	@Override
 	public T get(int index) {
 		if (index < 0)
@@ -32,6 +33,13 @@ public class ProxyList<T> extends AbstractList<T> {
 	@Override
 	public int size() {
 		return to - from;
+	}
+
+	@Override
+	public void clear() {
+		for (; from < to; to--) {
+			remove(0);
+		}
 	}
 
 	@Override
@@ -52,6 +60,7 @@ public class ProxyList<T> extends AbstractList<T> {
 		to--;
 		return refList.remove(index + from);
 	}
+
 
 	@Override
 	public void add(int index, T element) {

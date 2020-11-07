@@ -4,6 +4,7 @@ import com.niton.StorageException;
 import com.niton.collections.BaseCollection;
 import com.niton.collections.ProxyList;
 import com.niton.memory.direct.DataStore;
+import com.niton.memory.direct.NegativeIndexException;
 import com.niton.memory.direct.managed.BitSystem;
 import com.niton.memory.direct.managed.Section;
 import com.niton.memory.direct.managed.VirtualMemory;
@@ -106,8 +107,9 @@ public class BackedPerformanceList<T> extends BaseCollection<T> implements List<
 
 	@Override
 	public boolean addAll(int index, Collection<? extends T> c) {
+		int i = 0;
 		for (T t : c) {
-			add(index,t);
+			add(index+(i++),t);
 		}
 		return c.size()>0;
 	}
@@ -146,11 +148,17 @@ public class BackedPerformanceList<T> extends BaseCollection<T> implements List<
 			throw new IndexOutOfBoundsException(index);
 		if(index < 0)
 			throw new IndexOutOfBoundsException(index);
-		return dataMemory.get(this.indexMap.get(index)).read(serializer);
+		index = this.indexMap.get(index);
+		Section sect = dataMemory.get(index);
+		T old  = sect.read(serializer);
+		sect.write(element,serializer);
+		return old;
 	}
 
 	@Override
 	public void add(int index, T element) {
+		if(index < 0)
+			throw new NegativeIndexException();
 		if(index == size())
 			add(element);
 		else if (index > size())
@@ -159,16 +167,16 @@ public class BackedPerformanceList<T> extends BaseCollection<T> implements List<
 			shiftUp(index,1);
 			int sectIndex = getNextFreeSegmentIndex();
 			indexMap.put(index, sectIndex);
-			dataMemory.get(sectIndex).write(element,serializer);
+			dataMemory.createOrGetSection(2*1024,4,sectIndex).write(element,serializer);
 		}
 	}
 
 
 	@Override
 	public T remove(int index) {
-		if(index >= size())
-			throw new IndexOutOfBoundsException(index);
 		if(index < 0)
+			throw new NegativeIndexException();
+		if(index >= size())
 			throw new IndexOutOfBoundsException(index);
 
 		T t = get(index);
@@ -180,15 +188,44 @@ public class BackedPerformanceList<T> extends BaseCollection<T> implements List<
 		return t;
 	}
 	private void shiftUp(int index, int i) {
+		if(index < 0)
+			throw new NegativeIndexException();
 		int targetIndex = size()+i-1;
 		while(targetIndex > index) {
 			int fetchFrom = targetIndex-i;
 			int indexFrom = indexMap.get(fetchFrom);
-			this.indexMap.put(targetIndex--, indexFrom);
+			this.indexMap.put(targetIndex, indexFrom);
+			targetIndex--;
 		}
 	}
 
-	private void shiftDown(int index,int i) {
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (!(o instanceof List)) return false;
+		if(((List<?>) o).size() != size()) return false;
+		int i = 0;
+		while(i<size()){
+			if(!Objects.equals(((List<?>) o).get(i),get(i++)))
+			return false;
+		}
+			return true;
+	}
+
+	@Override
+	public int hashCode() {
+		int i = 0;
+		int expectedHashCode = 1;
+		while (i<size()) {
+			T element = get(i++);
+			expectedHashCode = 31 * expectedHashCode + ((element == null) ? 0 : element.hashCode());
+		}
+		return expectedHashCode;
+	}
+
+	private void shiftDown(int index, int i) {
+		if(index < 0)
+			throw new NegativeIndexException();
 		int targetIndex = index;
 		int sz = size();
 		while(targetIndex < sz-1) {
@@ -381,6 +418,10 @@ public class BackedPerformanceList<T> extends BaseCollection<T> implements List<
 
 	@Override
 	public ListIterator<T> listIterator(int index) {
+		if(index > size())
+			throw new IndexOutOfBoundsException(index);
+		if(index < 0)
+			throw new NegativeIndexException();
 		return new ListItr(index);
 	}
 

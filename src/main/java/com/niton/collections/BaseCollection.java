@@ -38,7 +38,9 @@ public abstract class BaseCollection<E> implements Collection<E> {
 	@Override
 	public boolean removeAll(Collection<?> c) {
 		int prevSize = size();
-		c.forEach(this::remove);
+		c.forEach(e-> {
+			while (contains(e)) this.remove(e);
+		});
 		return size()-prevSize != 0;
 	}
 
