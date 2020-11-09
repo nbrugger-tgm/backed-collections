@@ -22,6 +22,10 @@ public abstract class FixedDataStore extends DataStore {
 			throw new Section.SegmentationFault(to+" is outside the readable area (0-"+maxLength()+")");
 		if(from < 0 || to < 0)
 			throw new NegativeIndexException();
+		if(from > to)
+			throw new IndexOutOfBoundsException("Cannot read backwards (from "+from+" to "+to+")");
+		//if(to > size())
+		//	System.out.println("WARNING! Reading outside of size()");
 		return fixedInnerRead(from,to);
 	}
 
