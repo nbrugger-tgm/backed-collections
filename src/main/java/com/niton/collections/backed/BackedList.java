@@ -33,7 +33,7 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 
 	public BackedList(DataStore store, Serializer<T> serializer,boolean read) {
 		this.serializer = serializer;
-		this.memory = new VirtualMemory(store, BitSystem.X32);
+		this.memory = new VirtualMemory(store, BitSystem.X64);
 		if(read){
 			memory.readIndex();
 		}else{
