@@ -10,7 +10,9 @@ import com.niton.collections.backed.BackedPerformanceList;
 import com.niton.collections.backed.Serializer;
 import com.niton.memory.direct.stores.ArrayStore;
 import junit.framework.Test;
+import junit.framework.TestResult;
 import junit.framework.TestSuite;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.AbstractMap;
 import java.util.List;
@@ -150,6 +152,13 @@ public class CollectionTest {
 						SUPPORTS_ITERATOR_REMOVE
 				)
 				.createTestSuite();
+	}
+
+	@org.junit.jupiter.api.Test
+	public void runJavaSpecTest(){
+		TestResult res;
+		allTests().run(res = new TestResult());
+		Assertions.assertEquals(0,res.failureCount()+res.errorCount());
 	}
 
 	private interface ListProvider<T> {

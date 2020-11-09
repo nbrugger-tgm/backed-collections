@@ -19,14 +19,13 @@ public class PerformanceTest {
 	}
 
 	public static void main(String[] args) throws FileNotFoundException, InterruptedException {
-		Thread.sleep(15000);
 		new PerformanceTest().testSuite(RandomObject::new);
 	}
 
 	private<T> void testSuite(Generator<T> g) throws FileNotFoundException {
 		File f1 = new File("cache.dat");
 		File f2 = new File("optimized.dat");
-		ArrayStore store = new ArrayStore(1024*1024*40);
+		ArrayStore store = new ArrayStore(1024*1024*100);
 		FileStore fileStore = new FileStore(f1);
 		FileStore optimizedFileStore = new FileStore(f2);
 		Map<String,List<T>> implementations = new HashMap<>();
@@ -38,8 +37,9 @@ public class PerformanceTest {
 
 		for (Map.Entry<String, List<T>> implementation : implementations.entrySet()) {
 			long start = System.currentTimeMillis();
+			System.out.println("Test : "+implementation.getKey());
 			results.put(implementation.getKey(),testListImplementation(100,implementation.getValue(),g));
-			System.out.println(implementation.getKey()+" DONE : "+(System.currentTimeMillis()-start)+"ms");
+			System.out.println("   DONE : "+(System.currentTimeMillis()-start)+"ms");
 		}
 
 		printResult(results);
@@ -71,30 +71,25 @@ public class PerformanceTest {
 	}
 
 	private <T> void createImplementations(ArrayStore store, FileStore fileStore,FileStore optimized, Map<String, List<T>> implementations) {
+		implementations.put("ArrayList",new ArrayList<>());
+
 		BackedList<T> allOptimizedArrayStoreList = new BackedList<>(store, false);
 		allOptimizedArrayStoreList.setIncrementSize(1024*10);
 		allOptimizedArrayStoreList.reservedObjectSpace = 200;
-		//implementations.put("All optimized ArrayStoreList", allOptimizedArrayStoreList);
+		implementations.put("BackedList -> Array", allOptimizedArrayStoreList);
 
-		BackedList<T> optimizedIncrementArrayStoreList = new BackedList<>(store, false);
-		optimizedIncrementArrayStoreList.setIncrementSize(1024*10);
-		//implementations.put("Increment Optimized ArrayStoreList",optimizedIncrementArrayStoreList);
+		implementations.put("BackedList -> Array (UO)",new BackedList<>(store,false));
 
-		BackedList<T> optimizedObjectReserveArrayStoreList = new BackedList<>(store, false);
-		optimizedObjectReserveArrayStoreList.reservedObjectSpace = 200;
-		//implementations.put("ObjectSpace optimized ArrayStoreList",optimizedObjectReserveArrayStoreList);
-		//implementations.put("Array Store backed list",new BackedList<>(store,false));
-
-		//implementations.put("File backed List",new BackedList<>(fileStore,false));
+		implementations.put("BackedList -> File (UO)",new BackedList<>(fileStore,false));
 
 		BackedList<T> optimizedFileStore = new BackedList<>(optimized,false);
 		optimizedFileStore.reservedObjectSpace = 200;
 		optimizedFileStore.setIncrementSize(512);
-		//implementations.put("BackedList",optimizedFileStore);
+		implementations.put("BackedList -> File",optimizedFileStore);
 
-		//implementations.put("ArrayList",new ArrayList<>());
 		//implementations.put("LinkedList",new LinkedList<>());
-		implementations.put("BackedPerformanceList",new BackedPerformanceList<>(optimized, new OOSSerializer<>(), false));
+		implementations.put("BackedPerformanceList -> File",new BackedPerformanceList<>(optimized, new OOSSerializer<>(), false));
+		implementations.put("BackedPerformanceList -> Array",new BackedPerformanceList<>(store, new OOSSerializer<>(), false));
 	}
 
 	private <T> List<Measurement> testListImplementation(int elements, List<T> implementation, Generator<T> gen){
@@ -106,13 +101,22 @@ public class PerformanceTest {
 				foreach(implementation),
 				iterator(implementation),
 				randomAccess(implementation),
+				removeAllFrom0(implementation),
 				testListAdding(elements,gen,implementation),
-				removeAllFrom0(implementation)
+				removeRandom(implementation)
 		);
 	}
 
+	private <T> Measurement removeRandom(List<T> implementation) {
+		return measure("remove random",() -> {
+			int size = implementation.size();
+			for (int i = 0; i < size; i++) {
+				implementation.remove(Math.random()*(size-i-1)+1);
+			}
+		});
+	}
 	public <T> Measurement testListAdding(int elements, Generator<T> gen, List<T> implementation){
-		return measure("Insert at End", ()->{
+		return measure("Insert at End",()->{
 			for (int i = 0; i < elements; i++) {
 				T t = gen.next();
 				implementation.add(t);
@@ -120,7 +124,7 @@ public class PerformanceTest {
 		});
 	}
 	public <T> Measurement testListInsertAdding(int elements, Generator<T> gen, List<T> implementation){
-		return measure("Insert at random", ()->{
+		return measure("insert random", ()->{
 			for (int i = 0; i < elements; i++) {
 				T t = gen.next();
 				implementation.add((int) (Math.random()*implementation.size()),t);
@@ -128,10 +132,10 @@ public class PerformanceTest {
 		});
 	}
 	public <T> Measurement testListZeroInsertAdding(int elements, Generator<T> gen, List<T> implementation){
-		return measure("Insert at 0",()->{
+		return measure("insert at 0",()->{
 			for (int i = 0; i < elements; i++) {
 				T t = gen.next();
-				implementation.add(t);
+				implementation.add(0,t);
 			}
 		});
 	}
@@ -139,7 +143,7 @@ public class PerformanceTest {
 		return measure("clear", implementation::clear);
 	}
 	public <T> Measurement foreach(List<T> implementation){
-		return measure("forach",()->{
+		return measure("foreach",()->{
 			boolean b = false;
 			for(T t : implementation){
 				b |= t.equals(System.currentTimeMillis());
@@ -147,7 +151,7 @@ public class PerformanceTest {
 		});
 	}
 	public <T> Measurement iterator(List<T> implementation){
-		return measure("iterator",()->{
+		return measure("iterator.next()",()->{
 			Iterator<T> it = implementation.listIterator();
 			while(it.hasNext())
 				it.next();
@@ -161,14 +165,14 @@ public class PerformanceTest {
 		});
 	}
 	public <T> Measurement removeAllFrom0(List<T> implementation){
-		return measure("remove all from 0",()->{
+		return measure("remove from 0",()->{
 			while (implementation.size()>0) {
 				implementation.remove(0);
 			}
 		});
 	}
 	public <T> Measurement randomAccess(List<T> implementation){
-		return measure("Random access",()->{
+		return measure("random access",()->{
 			for (int i = 0; i < implementation.size(); i++) {
 				T t = implementation.get((int) (Math.random()*implementation.size()));
 			}
