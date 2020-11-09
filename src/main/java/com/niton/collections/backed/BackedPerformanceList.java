@@ -12,14 +12,14 @@ import com.niton.memory.direct.managed.VirtualMemory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class BackedPerformanceList<T> extends BaseCollection<T> implements List<T> {
 	private final VirtualMemory mainMemory;
-	private final BackedMap<Integer,Integer> indexMap;
+	private final BackedList<Integer> indexMap;
 	private final VirtualMemory dataMemory;
 	private final Serializer<T> serializer;
-	public BackedPerformanceList(DataStore store, boolean read, Serializer<T> serializer) {
+	private final BackedList<Integer> freeSections;
+	public BackedPerformanceList(DataStore store, Serializer<T> serializer, boolean read) {
 		mainMemory = new VirtualMemory(store, BitSystem.X64);
 		this.serializer = serializer;
 		if(read) {
@@ -28,12 +28,25 @@ public class BackedPerformanceList<T> extends BaseCollection<T> implements List<
 			store.cut(0);
 			mainMemory.initIndex(2);
 		}
-		Section indexSection = read ? mainMemory.get(0) : mainMemory.createSection(1024*1024*5,4);
-		indexMap = new BackedMap<>(indexSection,Serializer.INT,Serializer.INT,read);
-		indexMap.useCaching = true;
-		indexMap.setKEY_SIZE_ALLOC(4);
-		indexMap.setVALUE_SIZE_ALLOC(4);
-		Section dataSection = read ? mainMemory.get(1) : mainMemory.createSection(1024*1024*5,1);
+
+		//Init Metadata
+		Section indexSection = read ?
+				mainMemory.get(0) :
+				mainMemory.createSection(1024*1024*2,4);
+
+		Section freeSectionsSection = read ?
+				mainMemory.get(1) :
+				mainMemory.createSection(1024*1024*2,4);
+
+		freeSections = new BackedList<>(freeSectionsSection,read);
+		freeSections.setIncrementSize(1024*4);
+		freeSections.reservedObjectSpace = 4;
+		indexMap = new BackedList<>(indexSection,Serializer.INT,read);
+		indexMap.reservedObjectSpace=4;
+		indexMap.setIncrementSize(1024*10);
+
+		//Init data Segment
+		Section dataSection = read ? mainMemory.get(2) : mainMemory.createSection(1024*1024*5,1);
 		dataMemory = new VirtualMemory(dataSection, BitSystem.X64);
 		if(read)
 			dataMemory.readIndex();
@@ -65,30 +78,33 @@ public class BackedPerformanceList<T> extends BaseCollection<T> implements List<
 
 	@Override
 	public boolean add(T t) {
-		int index = size();
-		int dataIndex = getNextFreeSegmentIndex();
-		Section sect = dataMemory.createOrGetSection(2*1024,4,dataIndex);
-		sect.write(t,serializer);
-		this.indexMap.put(index,dataIndex);
+		add(size(),t);
 		return true;
 	}
 
-	private int getNextFreeSegmentIndex() {
-		int index = 0;
-		Collection<Integer> usedIndexes = this.indexMap.values();
-		while (usedIndexes.contains(index))
-			index++;
-		return index;
+
+	private Section registerNextIndex(int index){
+		int sectionIndex = getNextFreeIndex();
+		if(!freeSections.isEmpty())
+			freeSections.remove(freeSections.size()-1);
+		indexMap.add(index,sectionIndex);
+		return dataMemory.createOrGetSection(2*1024,4,sectionIndex);
+	}
+
+	private int getNextFreeIndex() {
+		if(freeSections.size() == 0)
+			return (int) dataMemory.sectionCount();
+		return freeSections.get(freeSections.size()-1);
 	}
 
 	@Override
 	public boolean remove(Object o) {
 		int sz = size();
 		try{
-			int i = indexOf((T)o);
+			int i = indexOf(o);
 			if(i == -1)
 				return false;
-			remove(indexOf(o));
+			remove(i);
 		}catch (ClassCastException e){
 			return false;
 		}
@@ -159,16 +175,12 @@ public class BackedPerformanceList<T> extends BaseCollection<T> implements List<
 	public void add(int index, T element) {
 		if(index < 0)
 			throw new NegativeIndexException();
-		if(index == size())
-			add(element);
 		else if (index > size())
 			throw new IndexOutOfBoundsException("Cannot add element beyond end");
-		else {
-			shiftUp(index,1);
-			int sectIndex = getNextFreeSegmentIndex();
-			indexMap.put(index, sectIndex);
-			dataMemory.createOrGetSection(2*1024,4,sectIndex).write(element,serializer);
-		}
+
+		//shiftUp(index,1);
+		registerNextIndex(index).write(element,serializer);
+
 	}
 
 
@@ -180,21 +192,24 @@ public class BackedPerformanceList<T> extends BaseCollection<T> implements List<
 			throw new IndexOutOfBoundsException(index);
 
 		T t = get(index);
-
-		dataMemory.get(indexMap.get(index)).cut(0);
+		int sectIndex = indexMap.get(index);
 		shiftDown(index,1);
-		indexMap.remove(size()-1);
-
+		dataMemory.get(sectIndex).cut(0);
+		freeSections.add(sectIndex);
 		return t;
 	}
 	private void shiftUp(int index, int i) {
 		if(index < 0)
 			throw new NegativeIndexException();
 		int targetIndex = size()+i-1;
+		int indexSize = indexMap.size();
 		while(targetIndex > index) {
 			int fetchFrom = targetIndex-i;
 			int indexFrom = indexMap.get(fetchFrom);
-			this.indexMap.put(targetIndex, indexFrom);
+			if(targetIndex < indexSize)
+				this.indexMap.set(targetIndex, indexFrom);
+			else
+				indexMap.add(targetIndex,indexFrom);
 			targetIndex--;
 		}
 	}
@@ -229,9 +244,10 @@ public class BackedPerformanceList<T> extends BaseCollection<T> implements List<
 		int targetIndex = index;
 		int sz = size();
 		while(targetIndex < sz-1) {
-			this.indexMap.replace(targetIndex, indexMap.get(targetIndex + i));
+			this.indexMap.set(targetIndex, indexMap.get(targetIndex + i));
 			targetIndex++;
 		}
+		this.indexMap.remove(sz-1);
 	}
 
 	@Override
@@ -245,7 +261,7 @@ public class BackedPerformanceList<T> extends BaseCollection<T> implements List<
 			throw new StorageException(e);
 		}
 
-		for (int i = 0; i < dataMemory.sectionCount(); i++) {
+		for (int i : indexMap) {
 			Section s = dataMemory.get(i);
 			byte[] content = s.readFull();
 			if(Arrays.equals(content,serial))
@@ -263,9 +279,11 @@ public class BackedPerformanceList<T> extends BaseCollection<T> implements List<
 	}
 
 	private int getIndexForSection(int i) {
-		for (Integer index : indexMap.keySet()) {
-			if(indexMap.get(index) == i)
-				return index;
+		int ind = 0;
+		for (Integer index : indexMap) {
+			if(index == i)
+				return ind;
+			ind ++;
 		}
 		return -1;
 	}

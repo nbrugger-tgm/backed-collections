@@ -38,7 +38,7 @@ public class CollectionTest {
 		TestSuite suite =
 				new TestSuite("Backed Collections Tests");
 			//suite.addTest(testBackedList(()->new BackedList<>(memoryOne, Serializer.STRING,false)));
-			suite.addTest(testBackedList(()->new BackedPerformanceList<>(memoryTwo, false,Serializer.STRING)));
+			suite.addTest(testBackedList(()->new BackedPerformanceList<>(memoryTwo, Serializer.STRING, false)));
 			suite.addTest(testBackedMap());
 			return suite;
 		} catch (NoSuchMethodException e) {

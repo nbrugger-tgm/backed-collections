@@ -1,26 +1,27 @@
 package com.niton.collections;
 
 import com.niton.collections.backed.BackedList;
+import com.niton.collections.backed.BackedPerformanceList;
 import com.niton.collections.backed.Serializer;
 import com.niton.memory.direct.stores.ArrayStore;
 import com.niton.memory.direct.stores.FixedDataStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Iterator;
+import java.util.List;
 import java.util.ListIterator;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class BackedListTest {
 
-	BackedList<String> list;
+	List<String> list;
 
 	@BeforeEach
 	public void init() {
-		ArrayStore store = new ArrayStore(1024*1024);
+		ArrayStore store = new ArrayStore(1024*1024*22);
 		store.bufferSize = 1;
-		list = new BackedList<>(store, Serializer.STRING, false);
+		list = new BackedPerformanceList<>(store, Serializer.STRING,false);
 	}
 	@Test
 	public void general(){
@@ -31,6 +32,9 @@ public class BackedListTest {
 		assertEquals("Strings",list.get(1));
 		list.remove(1);
 		assertEquals(2,list.size());
+		list.add("YEET");
+		assertEquals("YEET",list.get(2));
+		assertEquals(3,list.size());
 		list.clear();
 		assertEquals(0, list.size());
 		assertThrows(Throwable.class, ()->list.get(0));
@@ -81,7 +85,7 @@ public class BackedListTest {
 		assertEquals("Vanessa", list.get(2));
 		assertEquals("Amanda", list.get(3));
 
-		assertTrue(list.size()==4);
+		assertEquals(list.size(), 4);
 	}
 
 	@Test

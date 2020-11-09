@@ -153,6 +153,14 @@ public abstract class DataStore {
 		return read(0,size());
 	}
 
+	/**
+	 * reads a array in the size of the buffer size or to the end if there are not enought bytes left
+	 * @return array from marker position to marker possition + buffersize
+	 */
+	public byte[] readBuffer(){
+		return innerRead(marker,Math.min(marker+bufferSize,size()));
+	}
+
 
 	public class DataStoreOutputStream extends OutputStream {
 		@Override
@@ -300,7 +308,7 @@ public abstract class DataStore {
 		jump(0);
 		final StringBuffer sb = new StringBuffer(getClass().getSimpleName()+"->");
 		sb.append('[');
-		for (int i = 0; i < size(); ++i)
+		for (int i = 0; i < Math.min(size(),100); ++i)
 			sb.append(i == 0 ? "" : ", ").append(i == originMarker?"> ":"").append(read(i));
 		sb.append(']');
 		jump(originMarker);

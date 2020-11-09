@@ -33,7 +33,7 @@ public class FileStore extends DataStore {
 			byte[] res = new byte[(int) (to-from)];
 			file.seek(from);
 			file.read(res,0, (int) (to-from));
-			jump(file.getFilePointer());
+			jump(to);
 			return res;
 		} catch (IOException e) {
 			throw new StorageException(e);
@@ -45,7 +45,7 @@ public class FileStore extends DataStore {
 		try {
 			file.seek(from);
 			file.write(data,0, (int) (to-from));
-			jump(file.getFilePointer());
+			jump(to);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

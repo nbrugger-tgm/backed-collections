@@ -71,28 +71,41 @@ public class BackedList<T> extends AbstractList<T> implements RandomAccess{
 
 	@Override
 	public boolean contains(Object o) {
-		if(size() == 0)
-			return false;
-
-		for(T e : this)
-			if(Objects.equals(o,e))
-				return true;
-		return false;
+		return indexOf(o) != -1;
 	}
 
 	@Override
 	public int indexOf(Object o) {
-		if(size() == 0)
+		int sz = size();
+		if(sz == 0)
 			return -1;
 
+		byte[] serial;
+		try {
+			serial = serializer.serialize((T) o);
+		} catch (ClassCastException e) {
+			return -1;
+		}
 		//TODO performance upgrade, serializing o and matching the bytes against the storage.
 		// Should yield good results in speed. Because its only one serialisation and then only bytematching
 		// And not deserializing for every element
 
-		for (int i = 0; i < size(); i++) {
-			T e = get(i);
-			if(Objects.equals(o,e))
-				return i;
+
+		sectionLoop: for (int i = 0; i < sz; i++) {
+			int inSerialIndex = 0;
+			Section s = memory.get(i);
+			if(s.size() != serial.length)
+				continue;
+			s.jump(0);
+			byte[] buff;
+			do{
+				buff = s.readBuffer();
+				for (byte b : buff) {
+					if (serial[inSerialIndex++] != b)
+						continue sectionLoop;
+				}
+			} while(buff.length == s.bufferSize);
+			return i;
 		}
 
 		return -1;

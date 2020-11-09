@@ -38,7 +38,7 @@ public class PerformanceTest {
 
 		for (Map.Entry<String, List<T>> implementation : implementations.entrySet()) {
 			long start = System.currentTimeMillis();
-			results.put(implementation.getKey(),testListImplementation(50,implementation.getValue(),g));
+			results.put(implementation.getKey(),testListImplementation(100,implementation.getValue(),g));
 			System.out.println(implementation.getKey()+" DONE : "+(System.currentTimeMillis()-start)+"ms");
 		}
 
@@ -74,7 +74,7 @@ public class PerformanceTest {
 		BackedList<T> allOptimizedArrayStoreList = new BackedList<>(store, false);
 		allOptimizedArrayStoreList.setIncrementSize(1024*10);
 		allOptimizedArrayStoreList.reservedObjectSpace = 200;
-		implementations.put("All optimized ArrayStoreList", allOptimizedArrayStoreList);
+		//implementations.put("All optimized ArrayStoreList", allOptimizedArrayStoreList);
 
 		BackedList<T> optimizedIncrementArrayStoreList = new BackedList<>(store, false);
 		optimizedIncrementArrayStoreList.setIncrementSize(1024*10);
@@ -90,11 +90,11 @@ public class PerformanceTest {
 		BackedList<T> optimizedFileStore = new BackedList<>(optimized,false);
 		optimizedFileStore.reservedObjectSpace = 200;
 		optimizedFileStore.setIncrementSize(512);
-		implementations.put("Optimized File Store",optimizedFileStore);
+		//implementations.put("BackedList",optimizedFileStore);
 
 		//implementations.put("ArrayList",new ArrayList<>());
 		//implementations.put("LinkedList",new LinkedList<>());
-		implementations.put("Performance File list",new BackedPerformanceList<>(optimized,false,new OOSSerializer<>()));
+		implementations.put("BackedPerformanceList",new BackedPerformanceList<>(optimized, new OOSSerializer<>(), false));
 	}
 
 	private <T> List<Measurement> testListImplementation(int elements, List<T> implementation, Generator<T> gen){
