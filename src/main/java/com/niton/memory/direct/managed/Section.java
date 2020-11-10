@@ -28,64 +28,39 @@ public class Section extends DataStore {
 				bit.getBase()/*size*/ +
 				bit.getBase()/*block-size*/;
 	}
-	private final DataStore dataStore;
-	private final DataStore metaStore;
+	private final DataStore store;
 	private long blockSizePointer;
 	private long endMarkPointer;
 	private long startAddressPointer;
 	private long endAddressPointer;
 	private Section followUp = null;
 	public byte shiftFlag = SHIFT_START_AND_END;
-	private DataInputStream metaReader;
-	private DataOutputStream metaWriter;
+	private DataInputStream dis;
+	private DataOutputStream dos;
 	private transient long startAddress,endAddress,endMark,blockSize;
-	public Section(int configAddress, DataStore store,boolean read) {
-		this(configAddress,store,store,BitSystem.X32,read);
-	}
-	public Section(int configAddress, DataStore store,DataStore metaStore,boolean read) {
-		this(configAddress,store,metaStore,BitSystem.X32,read);
-	}
 	//blockSize,usedSize,startAddress,endAddress
-	public Section(int configAddress, DataStore store,BitSystem system,boolean read) {
-		this(configAddress,store,store,system,read);
-	}
-	public Section(int configAddress, DataStore store,DataStore metaStore,BitSystem system,boolean read) {
-		this(
-				store,
-				metaStore,
+	public Section(int configAddress, DataStore store,BitSystem system) {
+		this(store,
 				configAddress,
 				configAddress+system.getBase(),
 				configAddress+(system.getBase()*2),
 				configAddress+(system.getBase()*3),
-				system,
-				read
-		);
+				system);
 	}
-
-
-
-	public Section(DataStore store, long blockSizePointer, long endMarkPointer, long startAddressPointer, long endAddressPointer,boolean read) {
-		this(store,store,blockSizePointer,endMarkPointer,startAddressPointer,endAddressPointer,BitSystem.X32,read);
+	public Section(int configAddress, DataStore store) {
+		this(configAddress,store,BitSystem.X32);
 	}
-	public Section(DataStore store,DataStore metaStore, long blockSizePointer, long endMarkPointer, long startAddressPointer, long endAddressPointer, BitSystem system,boolean read) {
-		this.bit = system;
-		this.dataStore = store;
-		this.metaStore = metaStore;
-		metaReader = new DataInputStream(metaStore.new DataStoreInputStream());
-		metaWriter = new DataOutputStream(metaStore.new DataStoreOutputStream());
-		this.blockSizePointer = blockSizePointer;
-		this.endMarkPointer = endMarkPointer;
-		this.startAddressPointer = startAddressPointer;
-		this.endAddressPointer = endAddressPointer;
-		if (read) {
-			readMetadata();
-		}
-	}
-
 	public long resolveAddress(long innerAddress){
 		return innerAddress+getStartAddress();
 	}
-	public void readMetadata() {
+	public Section(DataStore store, long blockSizePointer, long endMarkPointer, long startAddressPointer, long endAddressPointer) {
+		this(store,blockSizePointer,endMarkPointer,startAddressPointer,endAddressPointer,BitSystem.X32);
+	}
+	public Section(DataStore store, long blockSizePointer, long endMarkPointer, long startAddressPointer, long endAddressPointer, BitSystem system) {
+		this.bit = system;
+		this.store = store;
+		dis = new DataInputStream(store.new DataStoreInputStream());
+		dos = new DataOutputStream(store.new DataStoreOutputStream());
 		setBlockSizePointer(blockSizePointer);
 		setEndMarkPointer(endMarkPointer);
 		setStartAddressPointer(startAddressPointer);
@@ -98,7 +73,7 @@ public class Section extends DataStore {
 
 	public void setBlockSizePointer(long blockSizePointer) {
 		this.blockSizePointer = blockSizePointer;
-		blockSize = readFromMetaData(blockSizePointer);
+		blockSize = readFromAddress(blockSizePointer);
 	}
 
 	public long getEndMarkPointer() {
@@ -107,7 +82,7 @@ public class Section extends DataStore {
 
 	public void setEndMarkPointer(long endMarkPointer) {
 		this.endMarkPointer = endMarkPointer;
-		endMark = readFromMetaData(endMarkPointer);
+		endMark = readFromAddress(endMarkPointer);
 	}
 
 	public long getStartAddressPointer() {
@@ -116,7 +91,7 @@ public class Section extends DataStore {
 
 	public void setStartAddressPointer(long startAddressPointer) {
 		this.startAddressPointer = startAddressPointer;
-		startAddress = readFromMetaData(startAddressPointer);
+		startAddress = readFromAddress(startAddressPointer);
 	}
 
 	public long getEndAddressPointer() {
@@ -125,7 +100,7 @@ public class Section extends DataStore {
 
 	public void setEndAddressPointer(long endAddressPointer) {
 		this.endAddressPointer = endAddressPointer;
-		endAddress = readFromMetaData(endAddressPointer);
+		endAddress = readFromAddress(endAddressPointer);
 	}
 
 	@Override
@@ -144,7 +119,7 @@ public class Section extends DataStore {
 
 	private void setStartAddress(long startAddress) {
 		this.startAddress = startAddress;
-		bit.write(startAddressPointer, startAddress,metaStore, metaWriter);
+		bit.write(startAddressPointer, startAddress,store,dos);
 	}
 
 	public long getBlockSize(){
@@ -157,18 +132,18 @@ public class Section extends DataStore {
 		return startAddress;
 	}
 
-	private long readFromMetaData(long address) {
-		metaStore.jump(address);
+	private long readFromAddress(long address) {
+		store.jump(address);
 		try {
 			switch (bit){
 				case X8:
-					return metaReader.readByte();
+					return dis.readByte();
 				case X16:
-					return metaReader.readShort();
+					return dis.readShort();
 				case X32:
-					return metaReader.readInt();
+					return dis.readInt();
 				case X64:
-					return metaReader.readLong();
+					return dis.readLong();
 				default:
 					throw new IllegalStateException("Unexpected value: " + bit);
 			}
@@ -184,7 +159,7 @@ public class Section extends DataStore {
 			throw new SegmentationFault("Read outside the section (Sect: "+getStartAddress()+" - "+getEndAddress()+") READ: "+from+" - "+to);
 		long start = getStartAddress();
 		jump(to);
-		return dataStore.read(start+from,start+to);
+		return store.read(start+from,start+to);
 	}
 
 	@Override
@@ -192,7 +167,7 @@ public class Section extends DataStore {
 		while(to> capacity())
 			addBlock();
 		long strt= getStartAddress();
-		dataStore.write(data,from+strt,to+strt);
+		store.write(data,from+strt,to+strt);
 		setEndMarker((int)Math.max(to, size()));
 		jump(to);
 	}
@@ -206,22 +181,22 @@ public class Section extends DataStore {
 		shiftNextSection(-amount);
 		setStartAddress(getStartAddress()-amount);
 		setEndAddress(getEndAddress()-amount);
-		dataStore.jump(oldStart);
-		dataStore.shiftAll(-amount);
+		store.jump(oldStart);
+		store.shiftAll(-amount);
 	}
 	public void shiftForward(long amount) {
 		long oldStart = getStartAddress();
 		shiftNextSection(amount);
 		setStartAddress(getStartAddress()+amount);
 		setEndAddress(getEndAddress()+amount);
-		dataStore.jump(oldStart);
-		dataStore.shiftAll(amount);
+		store.jump(oldStart);
+		store.shiftAll(amount);
 	}
 	public void addBlock() {
 		long origEnd = getEndAddress();
 		long blcSz = getBlockSize();
-		dataStore.jump(origEnd);
-		dataStore.shiftAll(blcSz);
+		store.jump(origEnd);
+		store.shiftAll(blcSz);
 		setEndAddress(origEnd+blcSz);
 		shiftNextSection(blcSz);
 	}
@@ -268,19 +243,19 @@ public class Section extends DataStore {
 		return getEndAddress()- getStartAddress();
 	}
 	public void setEndAddress(long endAddress) {
-		bit.write(endAddressPointer, endAddress,metaStore, metaWriter);
+		bit.write(endAddressPointer, endAddress,store,dos);
 		this.endAddress = endAddress;
 	}
 
 	/**
-	 * Shifts the header to a different location
+	 * Shifts the hader to a different location
 	 * @param offset the ammount to shift (negative values shift towards index 0)
 	 * @param shiftData if true also the data is shifted if false only the addresses change
 	 */
 	public void shiftHeader(int offset, boolean shiftData) {
 		if(shiftData){
-			metaStore.jump(getBlockSizePointer());
-			metaStore.shift(offset,bit.getBase()*4);
+			store.jump(getBlockSizePointer());
+			store.shift(offset,bit.getBase()*4);
 		}
 		setEndAddressPointer(getEndAddressPointer()+offset);
 		setStartAddressPointer(getStartAddressPointer()+offset);
@@ -291,19 +266,19 @@ public class Section extends DataStore {
 
 	public void enlarge(long mvSize) {
 		long origEnd = getEndAddress();
-		dataStore.jump(origEnd);
-		dataStore.shiftAll(mvSize);
+		store.jump(origEnd);
+		store.shiftAll(mvSize);
 		setEndAddress(origEnd+mvSize);
 		shiftNextSection(mvSize);
 	}
 
 	public void setEndMarker(long endMarker) {
-		bit.write(endMarkPointer, endMarker,metaStore, metaWriter);
+		bit.write(endMarkPointer, endMarker,store,dos);
 		this.endMark = endMarker;
 	}
 
 	public void setBlockSize(long i) {
-		bit.write(blockSizePointer, i,metaStore, metaWriter);
+		bit.write(blockSizePointer, i,store,dos);
 		this.blockSize = i;
 	}
 

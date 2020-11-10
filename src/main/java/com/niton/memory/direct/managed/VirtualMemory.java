@@ -33,8 +33,8 @@ public class VirtualMemory {
 		mainDis = new DataInputStream(data.new DataStoreInputStream());
 	}
 	private class IndexSection extends Section {
-		public IndexSection(int configAddress, DataStore store, BitSystem system,boolean read) {
-			super(configAddress, store, system,read);
+		public IndexSection(int configAddress, DataStore store, BitSystem system) {
+			super(configAddress, store, system);
 		}
 
 		@Override
@@ -101,22 +101,25 @@ public class VirtualMemory {
 			throw new IllegalArgumentException("Enlargement intervall must be > 0");
 
 		sectionCache.clear();
-		data.cut(0);
+		data.jump(0);
 
-		index = new IndexSection(0, data,bits,false);
+		bits.write(data.getMarker(),0,data,mainDos);
 		bits.write(data.getMarker(),0,data,mainDos);
 		bits.write(data.getMarker(),0,data,mainDos);
 		bits.write(data.getMarker(),0,data,mainDos);
 
+		index = new IndexSection(0, data,bits);
+		index.refreshCaches();
 		indexDos = new DataOutputStream(index.new DataStoreOutputStream());
 		indexDis = new DataInputStream(index.new DataStoreInputStream());
 
-		index.init(getSectionHeaderSize()*enlargementInterval,0,0);
+		index.init(getSectionHeaderSize()*enlargementInterval,0,index.getHeaderSize());
 		index.setEndMarker(0);
 	}
 	public void readIndex(){
 		sectionCache.clear();
-		index = new IndexSection(0, data,bits,true);
+		index = new IndexSection(0, data,bits);
+		index.refreshCaches();
 		indexDos = new DataOutputStream(index.new DataStoreOutputStream());
 		indexDis = new DataInputStream(index.new DataStoreInputStream());
 		for (int i = 0; i < sectionCount(); i++) {
@@ -133,8 +136,15 @@ public class VirtualMemory {
 	}
 	protected Section readSection(long i){
 		Section sect = getSectionHullAt(i);//end
-		sect.readMetadata();
-
+		if(i == 0){
+			sect.setStartAddressPointer(index.getEndAddressPointer());
+			index.enableRefShifting(sect);
+			index.shiftFlag = Section.SHIFT_END;
+		}else{
+			Section previous = get(i-1);
+			previous.enableRefShifting(sect);
+			previous.shiftFlag = Section.SHIFT_END;
+		}
 		if(printig){
 			System.out.println("Add To Section Cache " + sect);
 			Arrays.stream(Thread.currentThread().getStackTrace()).forEach(System.out::println);
@@ -144,33 +154,23 @@ public class VirtualMemory {
 	}
 	private static boolean printig = false;
 	private Section getSectionHullAt(long i) {
-		Section sect = new Section(this.data,data,
+		return new Section(this.data,
 				index.resolveAddress(i * getSectionHeaderSize()),//block
 				index.resolveAddress(i * getSectionHeaderSize() + getBits().getBase()),//size
-				i == 0 ? index.getEndAddressPointer() : index.resolveAddress(i * getSectionHeaderSize() - getBits().getBase()),//start
-				index.resolveAddress(i * getSectionHeaderSize() + (getBits().getBase() * 2)),
-				bits,
-				false);
-		if(i == 0){
-			index.enableRefShifting(sect);
-			index.shiftFlag = Section.SHIFT_END;
-		}else{
-			Section previous = get(i-1);
-			previous.enableRefShifting(sect);
-			previous.shiftFlag = Section.SHIFT_END;
-		}
-		return sect;
+				index.resolveAddress(i * getSectionHeaderSize() - getBits().getBase()),//start
+				index.resolveAddress(i * getSectionHeaderSize() + (getBits().getBase() * 2))
+				, bits);
 	}
 
 	public Section createSection(long blockSize, long initialBlocks){
 		long priorSize = sectionCount();
-		Section sect = getSectionHullAt(priorSize);
-		sect.setEndAddress(sect.getStartAddress()+blockSize*initialBlocks);
-		sect.setEndMarker(0);
-		sect.setBlockSize(blockSize);
+		Section sect = readSection(priorSize);
+		index.jump(priorSize*getSectionHeaderSize());
+
+		bits.write(index.getMarker(),blockSize,index,indexDos);
+		bits.write(index.getMarker(),0,index,indexDos);
+		bits.write(index.getMarker(),sect.getStartAddress()+blockSize*initialBlocks,index,indexDos);
 		sect.refreshCaches();
-		sectionCache.add(sect);
-		index.enlarge(getSectionHeaderSize());
 		return sect;
 	}
 
@@ -258,7 +258,7 @@ public class VirtualMemory {
 
 		old.shiftHeader(getSectionHeaderSize(),false);
 		old.setEndMarker(oldSize);
-		Section s = new Section(0,this.data,bits,false);
+		Section s = new Section(0,this.data,bits);
 		long indexStart = index.getStartAddress();
 		s.setStartAddressPointer(indexStart+i*getSectionHeaderSize()-bits.getBase());
 		s.setBlockSizePointer(indexStart+i*getSectionHeaderSize());
