@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.io.Serializable;
+import java.security.MessageDigest;
 import java.util.*;
 
 public class PerformanceTest {
@@ -27,10 +28,9 @@ public class PerformanceTest {
 		File f2 = new File("optimized.dat");
 		ArrayStore store = new ArrayStore(1024*1024*100);
 		FileStore fileStore = new FileStore(f1);
-		FileStore optimizedFileStore = new FileStore(f2);
 		Map<String,List<T>> implementations = new HashMap<>();
 
-		createImplementations(store, fileStore, optimizedFileStore,implementations);
+		createImplementations(store, fileStore,implementations);
 
 		Map<String,List<Measurement>> results = new HashMap<>();
 
@@ -70,25 +70,23 @@ public class PerformanceTest {
 		printer.print(table);
 	}
 
-	private <T> void createImplementations(ArrayStore store, FileStore fileStore,FileStore optimized, Map<String, List<T>> implementations) {
+	private <T> void createImplementations(ArrayStore store, FileStore fileStore, Map<String, List<T>> implementations) {
+
+		BackedList<T> optimizedBackedList = new BackedList<>(store, false);
+		optimizedBackedList.setIncrementSize(1024*10);
+		optimizedBackedList.reservedObjectSpace = 200;
+		implementations.put("BackedList -> Array", optimizedBackedList);
+		implementations.put("BackedList -> Array (UO)",new BackedList<>(store,false));
+		implementations.put("BackedList -> File (UO)",new BackedList<>(fileStore,false));
+		BackedList<T> optimizedFileList = new BackedList<>(fileStore,false);
+		optimizedFileList.reservedObjectSpace = 200;
+		optimizedFileList.setIncrementSize(512);
+		implementations.put("BackedList -> File",optimizedFileList);
+
+		implementations.put("LinkedList",new LinkedList<>());
 		implementations.put("ArrayList",new ArrayList<>());
 
-		BackedList<T> allOptimizedArrayStoreList = new BackedList<>(store, false);
-		allOptimizedArrayStoreList.setIncrementSize(1024*10);
-		allOptimizedArrayStoreList.reservedObjectSpace = 200;
-		implementations.put("BackedList -> Array", allOptimizedArrayStoreList);
-
-		implementations.put("BackedList -> Array (UO)",new BackedList<>(store,false));
-
-		implementations.put("BackedList -> File (UO)",new BackedList<>(fileStore,false));
-
-		BackedList<T> optimizedFileStore = new BackedList<>(optimized,false);
-		optimizedFileStore.reservedObjectSpace = 200;
-		optimizedFileStore.setIncrementSize(512);
-		implementations.put("BackedList -> File",optimizedFileStore);
-
-		//implementations.put("LinkedList",new LinkedList<>());
-		implementations.put("BackedPerformanceList -> File",new BackedPerformanceList<>(optimized, new OOSSerializer<>(), false));
+		implementations.put("BackedPerformanceList -> File",new BackedPerformanceList<>(fileStore, new OOSSerializer<>(), false));
 		implementations.put("BackedPerformanceList -> Array",new BackedPerformanceList<>(store, new OOSSerializer<>(), false));
 	}
 
@@ -103,8 +101,18 @@ public class PerformanceTest {
 				randomAccess(implementation),
 				removeAllFrom0(implementation),
 				testListAdding(elements,gen,implementation),
-				removeRandom(implementation)
+				removeRandom(implementation),
+				iteratorAdding(elements,gen,implementation)
 		);
+	}
+
+	private <T> Measurement iteratorAdding(int elements, Generator<T> gen, List<T> implementation) {
+		return measure("Iterator adding",()->{
+			ListIterator<T> iter = implementation.listIterator(0);
+			for (int i = 0; i < elements; i++) {
+				iter.add(gen.next());
+			}
+		});
 	}
 
 	private <T> Measurement removeRandom(List<T> implementation) {

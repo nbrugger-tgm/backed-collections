@@ -38,7 +38,7 @@ public class BackedPerformanceList<T> extends BaseCollection<T> implements List<
 				mainMemory.get(1) :
 				mainMemory.createSection(1024*1024*2,4);
 
-		freeSections = new BackedList<>(freeSectionsSection,read);
+		freeSections = new BackedList<>(freeSectionsSection,Serializer.INT,read);
 		freeSections.setIncrementSize(1024*4);
 		freeSections.reservedObjectSpace = 4;
 		indexMap = new BackedList<>(indexSection,Serializer.INT,read);
